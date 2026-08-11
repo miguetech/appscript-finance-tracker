@@ -101,7 +101,18 @@ function parseCSV(str) {
 function requireFields(obj, campos) {
   return campos.filter(function (c) { return obj[c] === undefined || obj[c] === null || String(obj[c]).trim() === ''; });
 }
+
+var Aux = {
+  uid: uid,
+  round2: round2,
+  calcTotales: calcTotales,
+  formatMoney: formatMoney,
+  parseCSV: parseCSV,
+  requireFields: requireFields
+};
 ```
+
+Note: Apps Script does not namespace by file name. `Aux` is an explicit object aliasing the global functions so the plan's `Aux.xxx` references work. Later tasks append new helpers here if added.
 
 - [ ] **Step 3: Write `Data.gs`**
 
@@ -193,7 +204,22 @@ function updateRow_(sheet, row, obj, headers) {
 function deleteRow_(sheet, row) {
   if (row > 0) sheet.deleteRow(row);
 }
+
+var Data = {
+  SHEET_NAMES: SHEET_NAMES,
+  HEADERS: HEADERS,
+  getSheet_: getSheet_,
+  ensureSheets: ensureSheets,
+  seedDefaultConfig_: seedDefaultConfig_,
+  readRows_: readRows_,
+  appendRow_: appendRow_,
+  findRowBy_: findRowBy_,
+  updateRow_: updateRow_,
+  deleteRow_: deleteRow_
+};
 ```
+
+Note: Apps Script does not namespace by file name. `Data` is an explicit object aliasing the global functions so the plan's `Data.xxx` references work. Each later task that adds a function to `Data.gs` MUST add a corresponding alias line to this object (included in that task's step).
 
 - [ ] **Step 4: Write `Code.gs`**
 
@@ -293,6 +319,9 @@ function saveConfig_(obj) {
     updateRow_(sh, row, { clave: clave, valor: String(obj[clave]) }, headers);
   });
 }
+
+Data.readConfig_ = readConfig_;
+Data.saveConfig_ = saveConfig_;
 ```
 
 - [ ] **Step 2: Add API endpoints to `Code.gs`**
@@ -319,6 +348,7 @@ function saveConfig(obj) {
 
 ```javascript
 function test_Config_save() {
+  var original = Data.readConfig_();
   var cfg = { empresa_nombre: 'Test SA', prefijo_folio: 'T-', contador_folio: '7', iva_porcentaje: '15' };
   var r = saveConfig(cfg);
   if (!r.ok) throw new Error(r.error);
@@ -328,11 +358,11 @@ function test_Config_save() {
   if (bad.ok) throw new Error('debió fallar con prefijo vacío');
   var badNum = saveConfig({ contador_folio: 'abc' });
   if (badNum.ok) throw new Error('debió fallar con contador no numérico');
-  saveConfig(cfg);
+  saveConfig(original);
 }
 ```
 
-Note: test restores original config at the end to keep later tests predictable.
+Note: test captures `original` config and restores it at the end. This is REQUIRED so later tests (`test_Reportes`, which expects IVA 16%) run against the default config, not the test values.
 
 - [ ] **Step 4: Run tests**
 
@@ -396,6 +426,11 @@ function deleteCliente_(id) {
   var sh = getSheet_('Clientes');
   deleteRow_(sh, findRowBy_(sh, 'id_cliente', id, HEADERS.Clientes));
 }
+
+Data.listClientes_ = listClientes_;
+Data.saveCliente_ = saveCliente_;
+Data.hasInvoices_ = hasInvoices_;
+Data.deleteCliente_ = deleteCliente_;
 ```
 
 - [ ] **Step 2: Add API endpoints to `Code.gs`**
@@ -565,6 +600,13 @@ function deleteFactura_(id) {
     if (r.id_factura === id) deleteRow_(itemsSh, findRowBy_(itemsSh, 'id_factura', id, HEADERS.Factura_Items));
   });
 }
+
+Data.nextFolio_ = nextFolio_;
+Data.createFactura_ = createFactura_;
+Data.listFacturas_ = listFacturas_;
+Data.getFactura_ = getFactura_;
+Data.setEstadoFactura_ = setEstadoFactura_;
+Data.deleteFactura_ = deleteFactura_;
 ```
 
 - [ ] **Step 2: Add API endpoints to `Code.gs`**
@@ -683,6 +725,10 @@ function deleteGasto_(id) {
   var sh = getSheet_('Gastos');
   deleteRow_(sh, findRowBy_(sh, 'id_gasto', id, HEADERS.Gastos));
 }
+
+Data.listGastos_ = listGastos_;
+Data.saveGasto_ = saveGasto_;
+Data.deleteGasto_ = deleteGasto_;
 ```
 
 - [ ] **Step 2: Add API endpoints to `Code.gs`**
@@ -781,6 +827,8 @@ function getReportes_(mes) {
     top_clientes: top
   };
 }
+
+Data.getReportes_ = getReportes_;
 ```
 
 - [ ] **Step 2: Add API endpoint to `Code.gs`**
@@ -1147,7 +1195,7 @@ git commit -m "feat: generacion PDF bajo demanda"
     call('getConfig').then(function (cfg) {
       STATE.config = cfg;
       document.getElementById('empresaLabel').textContent = (cfg.empresa_nombre || '') + ' — ' + (cfg.moneda || '');
-      loadDashboard();
+      if (typeof loadDashboard === 'function') loadDashboard();
     }).catch(function (e) { toast(e.message, 'error'); });
   }
   window.addEventListener('DOMContentLoaded', init);
