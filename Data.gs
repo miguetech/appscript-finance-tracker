@@ -252,3 +252,36 @@ Data.listFacturas_ = listFacturas_;
 Data.getFactura_ = getFactura_;
 Data.setEstadoFactura_ = setEstadoFactura_;
 Data.deleteFactura_ = deleteFactura_;
+
+function listGastos_(filtro) {
+  filtro = filtro || {};
+  return readRows_(getSheet_('Gastos')).filter(function (g) {
+    if (filtro.mes && String(g.fecha).slice(0, 7) !== filtro.mes) return false;
+    if (filtro.categoria && g.categoria !== filtro.categoria) return false;
+    return true;
+  });
+}
+
+function saveGasto_(obj) {
+  var sh = getSheet_('Gastos');
+  var headers = HEADERS.Gastos;
+  if (obj.id_gasto) {
+    var row = findRowBy_(sh, 'id_gasto', obj.id_gasto, headers);
+    if (row < 0) throw new Error('Gasto no encontrado');
+    updateRow_(sh, row, obj, headers);
+    return obj;
+  }
+  obj.id_gasto = Aux.uid('gas');
+  obj.fecha = obj.fecha || new Date().toISOString().slice(0, 10);
+  appendRow_(sh, obj, headers);
+  return obj;
+}
+
+function deleteGasto_(id) {
+  var sh = getSheet_('Gastos');
+  deleteRow_(sh, findRowBy_(sh, 'id_gasto', id, HEADERS.Gastos));
+}
+
+Data.listGastos_ = listGastos_;
+Data.saveGasto_ = saveGasto_;
+Data.deleteGasto_ = deleteGasto_;

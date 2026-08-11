@@ -159,3 +159,33 @@ function test_Facturas_CRUD() {
   if (items.some(function (it) { return it.id_factura === f.id_factura; })) throw new Error('no eliminó items');
   deleteCliente(cid);
 }
+
+function listGastos(filtro) {
+  return respond_(function () { return Data.listGastos_(filtro); });
+}
+
+function saveGasto(obj) {
+  return respond_(function () {
+    var faltantes = Aux.requireFields(obj, ['descripcion', 'monto']);
+    if (faltantes.length) throw new Error('Faltan campos: ' + faltantes.join(', '));
+    if (Number(obj.monto) < 0) throw new Error('Monto inválido');
+    return Data.saveGasto_(obj);
+  });
+}
+
+function deleteGasto(id) {
+  return respond_(function () { Data.deleteGasto_(id); return true; });
+}
+
+function test_Gastos_CRUD() {
+  var g = saveGasto({ fecha: '2026-08-05', categoria: 'Renta', descripcion: 'Oficina', monto: 1500.5, metodo_pago: 'transferencia', proveedor: 'Inmobiliaria X' });
+  if (!g.ok) throw new Error(g.error);
+  var id = g.data.id_gasto;
+  var upd = saveGasto({ id_gasto: id, fecha: '2026-08-05', categoria: 'Renta', descripcion: 'Oficina mes', monto: 1600, metodo_pago: 'transferencia', proveedor: 'Inmobiliaria X' });
+  if (!upd.ok) throw new Error(upd.error);
+  var list = listGastos({ mes: '2026-08', categoria: 'Renta' });
+  if (list.data.length !== 1 || list.data[0].monto !== 1600) throw new Error('listado/update falló');
+  if (listGastos({ mes: '2027-01' }).data.length !== 0) throw new Error('filtro mes falló');
+  deleteGasto(id);
+  if (listGastos({}).data.some(function (x) { return x.id_gasto === id; })) throw new Error('no eliminó');
+}
