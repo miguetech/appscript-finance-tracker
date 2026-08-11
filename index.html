@@ -60,6 +60,13 @@
   .modal.show { display: flex; }
   .modal-content { background: #fff; border-radius: var(--radius); padding: 24px; width: 90%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
   .totals-preview { background: var(--bg); border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-top: 8px; }
+  .dlg { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 200; }
+  .dlg.show { display: flex; }
+  .dlg-box { background: #fff; border-radius: var(--radius); padding: 28px 32px; width: 90%; max-width: 420px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .dlg-icon { font-size: 40px; margin-bottom: 10px; }
+  .dlg-msg { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 20px; }
+  .dlg-box button { min-width: 110px; margin: 0 4px; }
+  .version-tag { display: inline-block; background: #e0e7ff; color: var(--primary); font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -78,7 +85,7 @@
   <main class="main">
     <div class="topbar">
       <h1 id="viewTitle">Dashboard</h1>
-      <span class="empresa" id="empresaLabel"></span>
+      <span class="empresa" id="empresaLabel"><span class="version-tag">v1.0</span></span>
     </div>
     <section class="view active" id="view-dashboard">
       <div class="grid-stats">
@@ -200,6 +207,12 @@
 </div>
 <div class="toast" id="toast"></div>
 <div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
+<div class="dlg" id="dlg"><div class="dlg-box">
+  <div class="dlg-icon" id="dlgIcon">✓</div>
+  <div class="dlg-msg" id="dlgMsg"></div>
+  <button id="dlgCancelBtn" style="background:transparent;color:var(--muted);border:1px solid var(--border);display:none">Cancelar</button>
+  <button id="dlgOkBtn">Aceptar</button>
+</div></div>
 <script>
   var STATE = { config: {}, view: 'dashboard' };
   var VIEW_TITLES = { dashboard: 'Dashboard', facturas: 'Facturas', clientes: 'Clientes', gastos: 'Gastos', reportes: 'Reportes', config: 'Configuración' };
@@ -250,8 +263,29 @@
 
   function aviso(msg, isError) {
     toast(msg, isError ? 'error' : 'ok');
-    if (isError) alert('Error: ' + msg);
-    else alert('✓ ' + msg);
+    var dlg = document.getElementById('dlg');
+    document.getElementById('dlgIcon').textContent = isError ? '✕' : '✓';
+    document.getElementById('dlgIcon').style.color = isError ? 'var(--red)' : 'var(--green)';
+    document.getElementById('dlgMsg').textContent = (isError ? 'Error: ' : '') + msg;
+    var btn = document.getElementById('dlgOkBtn');
+    btn.textContent = 'Aceptar';
+    btn.onclick = function () { dlg.classList.remove('show'); };
+    dlg.classList.add('show');
+  }
+
+  function confirmar(msg, onOk) {
+    var dlg = document.getElementById('dlg');
+    document.getElementById('dlgIcon').textContent = '?';
+    document.getElementById('dlgIcon').style.color = 'var(--amber)';
+    document.getElementById('dlgMsg').textContent = msg;
+    var btn = document.getElementById('dlgOkBtn');
+    btn.textContent = 'Sí';
+    btn.style.background = 'var(--red)';
+    btn.onclick = function () { dlg.classList.remove('show'); if (onOk) onOk(); };
+    var cancelBtn = document.getElementById('dlgCancelBtn');
+    cancelBtn.style.display = 'inline-block';
+    cancelBtn.onclick = function () { dlg.classList.remove('show'); };
+    dlg.classList.add('show');
   }
 
   function fmtMoney(n) {
@@ -336,9 +370,10 @@
   }
 
   function delFactura(id) {
-    if (!confirm('¿Eliminar esta factura y sus conceptos?')) return;
-    call('deleteFactura', [id]).then(function () { toast('Factura eliminada'); loadFacturas(false); })
-      .catch(function (e) { toast(e.message, 'error'); });
+    confirmar('¿Eliminar esta factura y sus conceptos?', function () {
+      call('deleteFactura', [id]).then(function () { aviso('Factura eliminada'); loadFacturas(false); })
+        .catch(function (e) { aviso(e.message, true); });
+    });
   }
 
   function downloadPDF(id) {
@@ -516,9 +551,10 @@
   }
 
   function delCliente(id) {
-    if (!confirm('¿Eliminar este cliente?')) return;
-    call('deleteCliente', [id]).then(function () { toast('Cliente eliminado'); loadClientes(); })
-      .catch(function (e) { toast(e.message, 'error'); });
+    confirmar('¿Eliminar este cliente?', function () {
+      call('deleteCliente', [id]).then(function () { aviso('Cliente eliminado'); loadClientes(); })
+        .catch(function (e) { aviso(e.message, true); });
+    });
   }
 
   function loadGastos() {
@@ -580,9 +616,10 @@
   }
 
   function delGasto(id) {
-    if (!confirm('¿Eliminar este gasto?')) return;
-    call('deleteGasto', [id]).then(function () { toast('Gasto eliminado'); loadGastos(); })
-      .catch(function (e) { toast(e.message, 'error'); });
+    confirmar('¿Eliminar este gasto?', function () {
+      call('deleteGasto', [id]).then(function () { aviso('Gasto eliminado'); loadGastos(); })
+        .catch(function (e) { aviso(e.message, true); });
+    });
   }
 
   function loadReportes() {

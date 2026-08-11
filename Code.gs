@@ -258,3 +258,18 @@ function test_buildPDF() {
   deleteFactura(f.id_factura);
   deleteCliente(c.data.id_cliente);
 }
+
+function getDebugInfo() {
+  return respond_(function () {
+    var out = { spreadsheet: SpreadsheetApp.getActiveSpreadsheet().getName() };
+    Data.SHEET_NAMES.forEach(function (n) {
+      var sh = Data.getSheet_(n);
+      out[n] = { rows: sh.getLastRow() - 1, headers: sh.getLastColumn() };
+    });
+    var cfg = Data.readConfig_();
+    out.moneda = cfg.moneda;
+    out.iva = cfg.iva_porcentaje;
+    out.prefijo = cfg.prefijo_folio;
+    return out;
+  });
+}
