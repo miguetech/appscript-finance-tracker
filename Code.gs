@@ -46,3 +46,33 @@ function test_ensureSheets() {
   });
   if (Data.getSheet_('Config').getFrozenRows() !== 1) throw new Error('Config sin fila congelada');
 }
+
+function getConfig() {
+  return respond_(function () { return Data.readConfig_(); });
+}
+
+function saveConfig(obj) {
+  return respond_(function () {
+    var requeridos = ['empresa_nombre', 'prefijo_folio'];
+    var faltantes = Aux.requireFields(obj, requeridos);
+    if (faltantes.length) throw new Error('Faltan campos: ' + faltantes.join(', '));
+    if (!/^[0-9]+$/.test(String(obj.contador_folio))) throw new Error('contador_folio debe ser entero');
+    if (isNaN(Number(obj.iva_porcentaje))) throw new Error('iva_porcentaje debe ser numérico');
+    Data.saveConfig_(obj);
+    return true;
+  });
+}
+
+function test_Config_save() {
+  var original = Data.readConfig_();
+  var cfg = { empresa_nombre: 'Test SA', prefijo_folio: 'T-', contador_folio: '7', iva_porcentaje: '15' };
+  var r = saveConfig(cfg);
+  if (!r.ok) throw new Error(r.error);
+  var out = Data.readConfig_();
+  if (out.prefijo_folio !== 'T-') throw new Error('no guardó prefijo');
+  var bad = saveConfig({ prefijo_folio: '' });
+  if (bad.ok) throw new Error('debió fallar con prefijo vacío');
+  var badNum = saveConfig({ contador_folio: 'abc' });
+  if (badNum.ok) throw new Error('debió fallar con contador no numérico');
+  saveConfig(original);
+}

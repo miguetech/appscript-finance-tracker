@@ -86,6 +86,21 @@ function deleteRow_(sheet, row) {
   if (row > 0) sheet.deleteRow(row);
 }
 
+function readConfig_() {
+  return readRows_(getSheet_('Config')).reduce(function (m, r) { m[r.clave] = r.valor; return m; }, {});
+}
+
+function saveConfig_(obj) {
+  var sh = getSheet_('Config');
+  var headers = HEADERS.Config;
+  var allowed = readRows_(sh).map(function (r) { return r.clave; });
+  Object.keys(obj).forEach(function (clave) {
+    if (allowed.indexOf(clave) === -1) return;
+    var row = findRowBy_(sh, 'clave', clave, headers);
+    updateRow_(sh, row, { clave: clave, valor: String(obj[clave]) }, headers);
+  });
+}
+
 var Data = {
   SHEET_NAMES: SHEET_NAMES,
   HEADERS: HEADERS,
@@ -98,3 +113,6 @@ var Data = {
   updateRow_: updateRow_,
   deleteRow_: deleteRow_
 };
+
+Data.readConfig_ = readConfig_;
+Data.saveConfig_ = saveConfig_;
