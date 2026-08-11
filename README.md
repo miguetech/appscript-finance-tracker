@@ -108,6 +108,27 @@ del spreadsheet) y pon:
 
 ---
 
+## Auto-despliegue con GitHub Actions (opcional)
+
+Cada vez que hagas `git push` a `main`, un Action sube el código a tu proyecto
+Apps Script y corre los tests. Para configurarlo:
+
+```bash
+# 1. Obtén tu scriptId (editor Apps Script → Configuración del proyecto → ID)
+# 2. Obtén tu token de clasp (~/.clasprc.json se crea tras `clasp login`)
+# 3. Guarda los secretos en tu repo (Settings → Secrets and variables → Actions)
+gh secret set CLASP_SCRIPT_ID --body "<tu-scriptId>"
+gh secret set CLASPRC_JSON < ~/.clasprc.json
+```
+
+> **Seguridad**: estos secrets están cifrados en GitHub y solo son visibles para
+> los Actions de tu repo. El repositorio público **no** expone sus valores, ni
+> tus datos ni tu proyecto de Apps Script. Es el flujo estándar de CI/CD.
+> El Action despliega a **un** scriptId — cada usuario sigue desplegando su
+> propia instancia con `./scripts/deploy.sh` o manualmente.
+
+---
+
 ## Estructura del proyecto
 
 ```
