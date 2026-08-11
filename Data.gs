@@ -285,3 +285,36 @@ function deleteGasto_(id) {
 Data.listGastos_ = listGastos_;
 Data.saveGasto_ = saveGasto_;
 Data.deleteGasto_ = deleteGasto_;
+
+function getReportes_(mes) {
+  var facturas = listFacturas_({ mes: mes });
+  var gastos = listGastos_({ mes: mes });
+  var facturado = 0, cobrado = 0, pendiente = 0;
+  var porCliente = {};
+  facturas.forEach(function (f) {
+    var total = Number(f.total) || 0;
+    facturado += total;
+    if (f.estado === 'pagada') cobrado += total; else pendiente += total;
+    porCliente[f.nombre_cliente] = (porCliente[f.nombre_cliente] || 0) + total;
+  });
+  var gastosTotal = 0, gastosPorCat = {};
+  gastos.forEach(function (g) {
+    var m = Number(g.monto) || 0;
+    gastosTotal += m;
+    var cat = g.categoria || 'Sin categoría';
+    gastosPorCat[cat] = (gastosPorCat[cat] || 0) + m;
+  });
+  var top = Object.keys(porCliente).map(function (n) { return { nombre: n, total: Aux.round2(porCliente[n]) }; })
+    .sort(function (a, b) { return b.total - a.total; }).slice(0, 5);
+  return {
+    facturado: Aux.round2(facturado),
+    cobrado: Aux.round2(cobrado),
+    pendiente: Aux.round2(pendiente),
+    gastos_total: Aux.round2(gastosTotal),
+    gastos_por_categoria: gastosPorCat,
+    utilidad: Aux.round2(cobrado - gastosTotal),
+    top_clientes: top
+  };
+}
+
+Data.getReportes_ = getReportes_;

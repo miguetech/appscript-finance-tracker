@@ -189,3 +189,28 @@ function test_Gastos_CRUD() {
   deleteGasto(id);
   if (listGastos({}).data.some(function (x) { return x.id_gasto === id; })) throw new Error('no eliminó');
 }
+
+function getReportes(mes) {
+  return respond_(function () { return Data.getReportes_(mes); });
+}
+
+function test_Reportes() {
+  var c = saveCliente({ nombre: 'Rep Test' });
+  var cid = c.data.id_cliente;
+  var f = createFactura({ id_cliente: cid, items: [{ descripcion: 'X', cantidad: 1, precio_unitario: 1000 }] }).data;
+  setEstadoFactura(f.id_factura, 'pagada');
+  saveGasto({ fecha: f.fecha_emision, categoria: 'Renta', descripcion: 'oficina', monto: 200 });
+  var mes = String(f.fecha_emision).slice(0, 7);
+  var r = getReportes(mes);
+  if (!r.ok) throw new Error(r.error);
+  var d = r.data;
+  if (d.facturado !== 1160) throw new Error('facturado mal: ' + d.facturado);
+  if (d.cobrado !== 1160 || d.pendiente !== 0) throw new Error('cobrado/pendiente mal');
+  if (d.gastos_total !== 200) throw new Error('gastos mal');
+  if (d.utilidad !== 960) throw new Error('utilidad mal: ' + d.utilidad);
+  if (d.top_clientes.length !== 1 || d.top_clientes[0].total !== 1160) throw new Error('top clientes mal');
+  deleteFactura(f.id_factura);
+  deleteCliente(cid);
+  var gastos = Data.listGastos_({});
+  gastos.forEach(function (g) { Data.deleteGasto_(g.id_gasto); });
+}
