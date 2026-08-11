@@ -99,7 +99,14 @@
     });
     document.getElementById('viewTitle').textContent = VIEW_TITLES[name];
     STATE.view = name;
-    var loaders = { dashboard: loadDashboard, facturas: loadFacturas, clientes: loadClientes, gastos: loadGastos, reportes: loadReportes, config: loadConfigView };
+    var loaders = {
+      dashboard: typeof loadDashboard === 'function' ? loadDashboard : null,
+      facturas: typeof loadFacturas === 'function' ? loadFacturas : null,
+      clientes: typeof loadClientes === 'function' ? loadClientes : null,
+      gastos: typeof loadGastos === 'function' ? loadGastos : null,
+      reportes: typeof loadReportes === 'function' ? loadReportes : null,
+      config: typeof loadConfigView === 'function' ? loadConfigView : null
+    };
     if (loaders[name]) loaders[name]();
   }
   document.querySelectorAll('.sidebar nav a').forEach(function (a) {
