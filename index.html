@@ -40,8 +40,8 @@
   .badge { padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
   .badge.pendiente { background: #fef3c7; color: var(--amber); }
   .badge.pagada { background: #d1fae5; color: var(--green); }
-  .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 14px; opacity: 0; transform: translateY(10px); transition: all .25s; z-index: 99; }
-  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast { position: fixed; top: 16px; left: 50%; transform: translate(-50%, -20px); padding: 14px 22px; border-radius: 10px; color: #fff; font-size: 15px; font-weight: 600; box-shadow: 0 6px 20px rgba(0,0,0,.2); opacity: 0; transition: all .3s; z-index: 99; text-align: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
   .toast.error { background: var(--red); }
   .toast.ok { background: var(--green); }
   .view { display: none; }
@@ -237,9 +237,11 @@
 
   function toast(msg, type) {
     var t = document.getElementById('toast');
-    t.textContent = msg;
+    var icon = type === 'error' ? '✕ ' : '✓ ';
+    t.textContent = icon + msg;
     t.className = 'toast show ' + (type || 'ok');
-    setTimeout(function () { t.classList.remove('show'); }, 3000);
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, 4500);
   }
 
   function fmtMoney(n) {
@@ -438,7 +440,7 @@
       items: items
     };
     call('createFactura', [payload]).then(function (f) {
-      toast('Factura ' + f.folio + ' creada');
+      toast('Factura ' + f.folio + ' guardada correctamente');
       closeModal();
       loadFacturas(false);
     }).catch(function (e) { toast(e.message, 'error'); });
@@ -496,7 +498,7 @@
       direccion: document.getElementById('cliDir').value
     };
     call('saveCliente', [payload]).then(function () {
-      toast('Cliente guardado');
+      toast('Cliente guardado correctamente');
       closeModal();
       loadClientes();
     }).catch(function (e) { toast(e.message, 'error'); });
@@ -562,7 +564,7 @@
       metodo_pago: document.getElementById('gasMetodo').value,
       proveedor: document.getElementById('gasProv').value
     };
-    call('saveGasto', [payload]).then(function () { toast('Gasto guardado'); closeModal(); loadGastos(); })
+    call('saveGasto', [payload]).then(function () { toast('Gasto guardado correctamente'); closeModal(); loadGastos(); })
       .catch(function (e) { toast(e.message, 'error'); });
   }
 
@@ -626,7 +628,7 @@
     call('saveConfig', [payload]).then(function () {
       STATE.config = payload;
       document.getElementById('empresaLabel').textContent = (payload.empresa_nombre || '') + ' — ' + (payload.moneda || '');
-      toast('Configuración guardada');
+      toast('Configuración guardada correctamente');
       loadConfigView();
     }).catch(function (e) { toast(e.message, 'error'); });
   }
