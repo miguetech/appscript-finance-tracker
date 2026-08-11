@@ -151,3 +151,104 @@ Data.listClientes_ = listClientes_;
 Data.saveCliente_ = saveCliente_;
 Data.hasInvoices_ = hasInvoices_;
 Data.deleteCliente_ = deleteCliente_;
+
+function nextFolio_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var cfg = readConfig_();
+    var n = Number(cfg.contador_folio) || 1;
+    var folio = String(cfg.prefijo_folio || '') + String(n).padStart(3, '0');
+    saveConfig_({ contador_folio: String(n + 1) });
+    return folio;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function createFactura_(obj) {
+  var cfg = readConfig_();
+  var clienteSh = getSheet_('Clientes');
+  var cRow = findRowBy_(clienteSh, 'id_cliente', obj.id_cliente, HEADERS.Clientes);
+  if (cRow < 0) throw new Error('Cliente no existe');
+  var cliente = readRows_(clienteSh).filter(function (c) { return c.id_cliente === obj.id_cliente; })[0];
+  var items = obj.items || [];
+  if (!items.length) throw new Error('La factura debe tener al menos un concepto');
+  items.forEach(function (it) {
+    if (Aux.requireFields(it, ['descripcion', 'cantidad', 'precio_unitario']).length) throw new Error('Concepto incompleto');
+    if (Number(it.cantidad) <= 0 || Number(it.precio_unitario) < 0) throw new Error('Cantidad/precio inválido');
+  });
+  var t = Aux.calcTotales(items, cfg.iva_porcentaje);
+  var factura = {
+    id_factura: Aux.uid('fac'),
+    folio: nextFolio_(),
+    id_cliente: obj.id_cliente,
+    nombre_cliente: cliente.nombre,
+    fecha_emision: obj.fecha_emision || new Date().toISOString().slice(0, 10),
+    fecha_vencimiento: obj.fecha_vencimiento || '',
+    subtotal: t.subtotal,
+    iva: t.iva,
+    total: t.total,
+    estado: 'pendiente',
+    fecha_pago: '',
+    notas: obj.notas || ''
+  };
+  appendRow_(getSheet_('Facturas'), factura, HEADERS.Facturas);
+  var itemsSh = getSheet_('Factura_Items');
+  items.forEach(function (it) {
+    appendRow_(itemsSh, {
+      id_factura: factura.id_factura,
+      descripcion: it.descripcion,
+      cantidad: Number(it.cantidad),
+      precio_unitario: Number(it.precio_unitario),
+      importe: Aux.round2(Number(it.cantidad) * Number(it.precio_unitario))
+    }, HEADERS.Factura_Items);
+  });
+  return factura;
+}
+
+function listFacturas_(filtro) {
+  filtro = filtro || {};
+  return readRows_(getSheet_('Facturas')).filter(function (f) {
+    if (filtro.estado && f.estado !== filtro.estado) return false;
+    if (filtro.mes && String(f.fecha_emision).slice(0, 7) !== filtro.mes) return false;
+    return true;
+  });
+}
+
+function getFactura_(id) {
+  var sh = getSheet_('Facturas');
+  var row = findRowBy_(sh, 'id_factura', id, HEADERS.Facturas);
+  if (row < 0) throw new Error('Factura no encontrada');
+  var factura = readRows_(sh).filter(function (f) { return f.id_factura === id; })[0];
+  var items = readRows_(getSheet_('Factura_Items')).filter(function (it) { return it.id_factura === id; });
+  return { factura: factura, items: items };
+}
+
+function setEstadoFactura_(id, estado) {
+  if (['pendiente', 'pagada'].indexOf(estado) === -1) throw new Error('Estado inválido');
+  var sh = getSheet_('Facturas');
+  var row = findRowBy_(sh, 'id_factura', id, HEADERS.Facturas);
+  if (row < 0) throw new Error('Factura no encontrada');
+  var f = readRows_(sh).filter(function (x) { return x.id_factura === id; })[0];
+  f.estado = estado;
+  f.fecha_pago = estado === 'pagada' ? (f.fecha_pago || new Date().toISOString().slice(0, 10)) : '';
+  updateRow_(sh, row, f, HEADERS.Facturas);
+}
+
+function deleteFactura_(id) {
+  var sh = getSheet_('Facturas');
+  deleteRow_(sh, findRowBy_(sh, 'id_factura', id, HEADERS.Facturas));
+  var itemsSh = getSheet_('Factura_Items');
+  var rows = readRows_(itemsSh);
+  rows.forEach(function (r) {
+    if (r.id_factura === id) deleteRow_(itemsSh, findRowBy_(itemsSh, 'id_factura', id, HEADERS.Factura_Items));
+  });
+}
+
+Data.nextFolio_ = nextFolio_;
+Data.createFactura_ = createFactura_;
+Data.listFacturas_ = listFacturas_;
+Data.getFactura_ = getFactura_;
+Data.setEstadoFactura_ = setEstadoFactura_;
+Data.deleteFactura_ = deleteFactura_;

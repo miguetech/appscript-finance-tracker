@@ -109,3 +109,53 @@ function test_Clientes_CRUD() {
   list = listClientes();
   if (list.data.some(function (x) { return x.id_cliente === id; })) throw new Error('no eliminó');
 }
+
+function createFactura(obj) {
+  return respond_(function () { return Data.createFactura_(obj); });
+}
+
+function listFacturas(filtro) {
+  return respond_(function () { return Data.listFacturas_(filtro); });
+}
+
+function getFactura(id) {
+  return respond_(function () { return Data.getFactura_(id); });
+}
+
+function setEstadoFactura(id, estado) {
+  return respond_(function () { Data.setEstadoFactura_(id, estado); return true; });
+}
+
+function deleteFactura(id) {
+  return respond_(function () { Data.deleteFactura_(id); return true; });
+}
+
+function test_Facturas_CRUD() {
+  var c = saveCliente({ nombre: 'Fiscal Test' });
+  var cid = c.data.id_cliente;
+  var cfg = Data.readConfig_();
+  var startFolio = Number(cfg.contador_folio);
+  var r = createFactura({
+    id_cliente: cid,
+    items: [{ descripcion: 'Servicio A', cantidad: 2, precio_unitario: 100 }, { descripcion: 'Servicio B', cantidad: 1, precio_unitario: 50 }]
+  });
+  if (!r.ok) throw new Error(r.error);
+  var f = r.data;
+  if (!f.folio) throw new Error('sin folio');
+  if (f.estado !== 'pendiente') throw new Error('estado inicial mal');
+  var cfg2 = Data.readConfig_();
+  if (Number(cfg2.contador_folio) !== startFolio + 1) throw new Error('folio no incrementó');
+  var g = getFactura(f.id_factura);
+  if (!g.ok || g.data.items.length !== 2) throw new Error('items no guardados');
+  if (g.data.factura.total !== 290) throw new Error('total mal: ' + g.data.factura.total);
+  var mark = setEstadoFactura(f.id_factura, 'pagada');
+  if (!mark.ok) throw new Error(mark.error);
+  var list = listFacturas({ estado: 'pagada' });
+  if (!list.data.some(function (x) { return x.id_factura === f.id_factura; })) throw new Error('no lista pagadas');
+  if (listFacturas({ estado: 'pendiente' }).data.some(function (x) { return x.id_factura === f.id_factura; })) throw new Error('sigue pendiente');
+  deleteFactura(f.id_factura);
+  if (getFactura(f.id_factura).ok) throw new Error('no eliminó factura');
+  var items = Data.readRows_(Data.getSheet_('Factura_Items'));
+  if (items.some(function (it) { return it.id_factura === f.id_factura; })) throw new Error('no eliminó items');
+  deleteCliente(cid);
+}
