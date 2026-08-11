@@ -214,3 +214,47 @@ function test_Reportes() {
   var gastos = Data.listGastos_({});
   gastos.forEach(function (g) { Data.deleteGasto_(g.id_gasto); });
 }
+
+function buildPDF(idFactura) {
+  var cfg = Data.readConfig_();
+  var detail = Data.getFactura_(idFactura);
+  var f = detail.factura;
+  var items = detail.items;
+  var cliente = Data.listClientes_().filter(function (c) { return c.id_cliente === f.id_cliente; })[0] || {};
+  var tpl = HtmlService.createHtmlOutputFromFile('pdfTemplate').getContent();
+  var rows = items.map(function (it) {
+    return '<tr><td>' + it.descripcion + '</td><td>' + it.cantidad + '</td><td class="num">' + Aux.formatMoney(it.precio_unitario) + '</td><td class="num">' + Aux.formatMoney(it.importe) + '</td></tr>';
+  }).join('');
+  var logo = cfg.empresa_logo ? '<img class="logo" src="' + cfg.empresa_logo + '" alt="logo">' : '';
+  var html = tpl
+    .split('${EMPRESA_NOMBRE}').join(cfg.empresa_nombre || '')
+    .split('${EMPRESA_RFC}').join(cfg.empresa_rfc || '')
+    .split('${EMPRESA_DIRECCION}').join(cfg.empresa_direccion || '')
+    .split('${EMPRESA_TELEFONO}').join(cfg.empresa_telefono || '')
+    .split('${EMPRESA_EMAIL}').join(cfg.empresa_email || '')
+    .split('${LOGO}').join(logo)
+    .split('${FOLIO}').join(f.folio)
+    .split('${FECHA_EMISION}').join(f.fecha_emision)
+    .split('${FECHA_VENCIMIENTO}').join(f.fecha_vencimiento || '—')
+    .split('${NOMBRE_CLIENTE}').join(f.nombre_cliente)
+    .split('${RFC_CLIENTE}').join(cliente.rfc || '')
+    .split('${DIRECCION_CLIENTE}').join(cliente.direccion || '')
+    .split('${MONEDA_SIMBOLO}').join(cfg.moneda_simbolo || '$')
+    .split('${SUBTOTAL}').join(Aux.formatMoney(f.subtotal))
+    .split('${IVA}').join(Aux.formatMoney(f.iva))
+    .split('${TOTAL}').join(Aux.formatMoney(f.total))
+    .split('${NOTAS}').join(f.notas || '')
+    .split('${ITEMS_ROWS}').join(rows);
+  var blob = Utilities.newBlob(html, 'text/html', 'factura_' + f.folio + '.html');
+  return blob.getAs('application/pdf').setName('Factura_' + f.folio + '.pdf');
+}
+
+function test_buildPDF() {
+  var c = saveCliente({ nombre: 'PDF Test', rfc: 'PDF0001', direccion: 'Calle 5' });
+  var f = createFactura({ id_cliente: c.data.id_cliente, items: [{ descripcion: 'Diseño', cantidad: 1, precio_unitario: 500 }] }).data;
+  var pdf = buildPDF(f.id_factura);
+  if (!pdf || pdf.getContentType() !== 'application/pdf') throw new Error('no genera PDF');
+  if (pdf.getName().indexOf('Factura_') !== 0) throw new Error('nombre PDF mal: ' + pdf.getName());
+  deleteFactura(f.id_factura);
+  deleteCliente(c.data.id_cliente);
+}
