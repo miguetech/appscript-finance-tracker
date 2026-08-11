@@ -136,7 +136,32 @@
         </table>
       </div>
     </section>
-    <section class="view" id="view-reportes"></section>
+    <section class="view" id="view-reportes">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Mes</label><input type="month" id="reporteMes" value=""></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="loadReportes()">Actualizar</button></div>
+        </div>
+      </div>
+      <div class="grid-stats">
+        <div class="stat"><div class="lbl">Facturado</div><div class="val" id="rFacturado">—</div></div>
+        <div class="stat"><div class="lbl">Cobrado</div><div class="val" id="rCobrado">—</div></div>
+        <div class="stat"><div class="lbl">Pendiente</div><div class="val" id="rPendiente">—</div></div>
+        <div class="stat"><div class="lbl">Gastos</div><div class="val" id="rGastos">—</div></div>
+        <div class="stat"><div class="lbl">Utilidad</div><div class="val" id="rUtilidad">—</div></div>
+      </div>
+      <div class="card">
+        <h3>Gastos por categoría</h3>
+        <ul id="listaCategorias" class="muted"></ul>
+      </div>
+      <div class="card">
+        <h3>Top 5 clientes</h3>
+        <table>
+          <thead><tr><th>Cliente</th><th>Total</th></tr></thead>
+          <tbody id="tbodyTopClientes"></tbody>
+        </table>
+      </div>
+    </section>
     <section class="view" id="view-config"></section>
   </main>
 </div>
@@ -506,6 +531,26 @@
     if (!confirm('¿Eliminar este gasto?')) return;
     call('deleteGasto', [id]).then(function () { toast('Gasto eliminado'); loadGastos(); })
       .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function loadReportes() {
+    var mes = document.getElementById('reporteMes').value || mesActual();
+    document.getElementById('reporteMes').value = mes;
+    call('getReportes', [mes]).then(function (d) {
+      document.getElementById('rFacturado').textContent = fmtMoney(d.facturado);
+      document.getElementById('rCobrado').textContent = fmtMoney(d.cobrado);
+      document.getElementById('rPendiente').textContent = fmtMoney(d.pendiente);
+      document.getElementById('rGastos').textContent = fmtMoney(d.gastos_total);
+      document.getElementById('rUtilidad').textContent = fmtMoney(d.utilidad);
+      var cats = Object.keys(d.gastos_por_categoria);
+      document.getElementById('listaCategorias').innerHTML = cats.length
+        ? cats.map(function (c) { return '<li>' + c + ': <strong>' + fmtMoney(d.gastos_por_categoria[c]) + '</strong></li>'; }).join('')
+        : '<li>Sin gastos en el mes</li>';
+      var tbody = document.getElementById('tbodyTopClientes');
+      tbody.innerHTML = d.top_clientes.length
+        ? d.top_clientes.map(function (t) { return '<tr><td>' + t.nombre + '</td><td>' + fmtMoney(t.total) + '</td></tr>'; }).join('')
+        : '<tr><td colspan="2" class="muted">Sin facturas en el mes</td></tr>';
+    }).catch(function (e) { toast(e.message, 'error'); });
   }
 </script>
 </body>
