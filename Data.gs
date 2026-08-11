@@ -94,7 +94,9 @@ function deleteRow_(sheet, row) {
 }
 
 function readConfig_() {
-  return readRows_(getSheet_('Config')).reduce(function (m, r) { m[r.clave] = r.valor; return m; }, {});
+  var sh = getSheet_('Config');
+  seedDefaultConfig_();
+  return readRows_(sh).reduce(function (m, r) { m[r.clave] = r.valor; return m; }, {});
 }
 
 function saveConfig_(obj) {
