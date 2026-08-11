@@ -44,7 +44,7 @@ if ! clasp whoami >/dev/null 2>&1; then
 fi
 
 say "Verificando archivos del proyecto..."
-for f in appscript.json Code.gs Data.gs Aux.gs index.html pdfTemplate.html; do
+for f in appsscript.json Code.gs Data.gs Aux.gs index.html pdfTemplate.html; do
   [ -f "$f" ] || err "Falta el archivo $f en el directorio actual."
 done
 

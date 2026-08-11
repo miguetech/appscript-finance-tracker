@@ -1,0 +1,6 @@
+# Credenciales y config local de clasp (contiene tu scriptId)
+.clasp.json
+.clasprc.json
+
+# Workspace de superpowers (briefs, reportes, ledger)
+.superpowers/

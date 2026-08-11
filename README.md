@@ -53,7 +53,7 @@ Cuando termine, el script te imprime la **URL de tu app**. Guárdala.
 2. En el spreadsheet: **Extensiones → Apps Script**.
 3. Borra el contenido por defecto y crea estos archivos (menú **+** → Archivo), pegando el
    contenido de cada uno del repo:
-   - `appscript.json`
+   - `appsscript.json`
    - `Code.gs`
    - `Data.gs`
    - `Aux.gs`
@@ -133,7 +133,7 @@ gh secret set CLASPRC_JSON < ~/.clasprc.json
 
 ```
 appscript-finance-tracker/
-├── appscript.json      # manifest (acceso "Solo yo")
+├── appsscript.json      # manifest (acceso "Solo yo")
 ├── Code.gs             # API del servidor (google.script.run) + tests
 ├── Data.gs             # acceso a Google Sheets (5 hojas)
 ├── Aux.gs              # helpers puros (totales, formato, validación, escape HTML)

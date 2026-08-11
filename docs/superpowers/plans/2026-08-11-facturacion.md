@@ -19,14 +19,14 @@
 - PDFs generated on demand only; never auto-saved to Drive.
 - No code comments unless needed to explain non-obvious logic.
 - Tests run via `Code.runTests()` in the Apps Script editor (or `clasp run`). No test framework available in Apps Script runtime; `runTests` executes every `test_*` function and logs PASS/FAIL.
-- File naming: `*.gs`, `appscript.json`, `index.html`, `pdfTemplate.html`.
+- File naming: `*.gs`, `appsscript.json`, `index.html`, `pdfTemplate.html`.
 
 ---
 
 ### Task 1: Project scaffolding — manifest, sheets, helpers, response wrapper
 
 **Files:**
-- Create: `appscript.json`
+- Create: `appsscript.json`
 - Create: `Code.gs`
 - Create: `Aux.gs`
 - Create: `Data.gs`
@@ -52,7 +52,7 @@
   - `Code.respond_(fn)` → `{ok:true,data}` or `{ok:false,error}`
   - `Code.runTests()` → logs all `test_*` PASS/FAIL, returns joined string
 
-- [ ] **Step 1: Write `appscript.json`**
+- [ ] **Step 1: Write `appsscript.json`**
 
 ```json
 {
@@ -282,7 +282,7 @@ Expected: `test_Aux_calcTotales: PASS`, `test_ensureSheets: PASS`.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add appscript.json Code.gs Aux.gs Data.gs
+git add appsscript.json Code.gs Aux.gs Data.gs
 git commit -m "feat: scaffolding apps script (manifest, sheets, helpers)"
 ```
 
@@ -1929,7 +1929,7 @@ Datos en Google Sheets, interfaz web (HTML + vanilla JS).
 
 ## Archivos
 
-- `appscript.json` — manifest (acceso "Solo yo")
+- `appsscript.json` — manifest (acceso "Solo yo")
 - `Code.gs` — API del servidor (google.script.run) + tests
 - `Data.gs` — acceso a Google Sheets
 - `Aux.gs` — helpers puros (totales, formato, validación)
@@ -1941,7 +1941,7 @@ Datos en Google Sheets, interfaz web (HTML + vanilla JS).
 ## Instalación
 
 1. Crea un Google Spreadsheet (será el contenedor de datos y de tu script).
-2. Extensiones → Apps Script. Copia `appscript.json`, `Code.gs`, `Data.gs`, `Aux.gs`,
+2. Extensiones → Apps Script. Copia `appsscript.json`, `Code.gs`, `Data.gs`, `Aux.gs`,
    `index.html` y `pdfTemplate.html` al proyecto (nombres idénticos).
 3. En el editor, ejecuta `ensureSheets` (crea las 5 hojas y la config por defecto).
 4. Ejecuta `runTests` y verifica que todo pase (PASS).

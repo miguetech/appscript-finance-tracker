@@ -125,7 +125,7 @@ Todas las funciones devuelven `{ok:true, data}` o `{ok:false, error}`.
 ## Archivos del proyecto
 
 ```
-appscript.json            # manifest de Apps Script
+appsscript.json            # manifest de Apps Script
 Code.gs                   # funciones de servidor
 Aux.gs                    # helpers puros
 index.html                # SPA (HTML + CSS + JS inline)
