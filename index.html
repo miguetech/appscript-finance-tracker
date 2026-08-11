@@ -106,7 +106,20 @@
         </table>
       </div>
     </section>
-    <section class="view" id="view-clientes"></section>
+    <section class="view" id="view-clientes">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Buscar</label><input id="buscarCliente" oninput="buscarClientes()" placeholder="Nombre o RFC"></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="openClienteForm()">Nuevo cliente</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Nombre</th><th>RFC</th><th>Email</th><th>Teléfono</th><th></th></tr></thead>
+          <tbody id="tbodyClientes"><tr><td colspan="5" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
     <section class="view" id="view-gastos"></section>
     <section class="view" id="view-reportes"></section>
     <section class="view" id="view-config"></section>
@@ -353,6 +366,68 @@
   }
 
   window.addEventListener('DOMContentLoaded', init);
+
+  var CLIENTES = [];
+
+  function loadClientes() {
+    call('listClientes').then(function (data) {
+      CLIENTES = data;
+      renderClientes(data);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function renderClientes(data) {
+    var tbody = document.getElementById('tbodyClientes');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="muted">Sin clientes</td></tr>'; return; }
+    tbody.innerHTML = data.map(function (c) {
+      return '<tr><td><strong>' + c.nombre + '</strong></td><td>' + (c.rfc || '') + '</td><td>' + (c.email || '') + '</td><td>' + (c.telefono || '') + '</td>' +
+        '<td><button class="small ghost" onclick="openClienteForm(\'' + c.id_cliente + '\')">Editar</button> ' +
+        '<button class="small danger" onclick="delCliente(\'' + c.id_cliente + '\')">Eliminar</button></td></tr>';
+    }).join('');
+  }
+
+  function buscarClientes() {
+    var q = document.getElementById('buscarCliente').value.toLowerCase();
+    renderClientes(CLIENTES.filter(function (c) {
+      return (c.nombre || '').toLowerCase().indexOf(q) !== -1 || (c.rfc || '').toLowerCase().indexOf(q) !== -1;
+    }));
+  }
+
+  function openClienteForm(id) {
+    var c = CLIENTES.filter(function (x) { return x.id_cliente === id; })[0] || {};
+    openModal(
+      '<h2>' + (id ? 'Editar cliente' : 'Nuevo cliente') + '</h2>' +
+      '<label>Nombre *</label><input id="cliNombre" value="' + (c.nombre || '') + '">' +
+      '<label>RFC</label><input id="cliRfc" value="' + (c.rfc || '') + '">' +
+      '<label>Email</label><input id="cliEmail" value="' + (c.email || '') + '">' +
+      '<label>Teléfono</label><input id="cliTel" value="' + (c.telefono || '') + '">' +
+      '<label>Dirección</label><textarea id="cliDir" rows="2">' + (c.direccion || '') + '</textarea>' +
+      '<button onclick="saveClienteForm(\'' + (c.id_cliente || '') + '\')">Guardar</button> ' +
+      '<button onclick="closeModal()">Cancelar</button>'
+    );
+  }
+
+  function saveClienteForm(id) {
+    var payload = {
+      id_cliente: id || undefined,
+      nombre: document.getElementById('cliNombre').value,
+      rfc: document.getElementById('cliRfc').value,
+      email: document.getElementById('cliEmail').value,
+      telefono: document.getElementById('cliTel').value,
+      direccion: document.getElementById('cliDir').value
+    };
+    call('saveCliente', [payload]).then(function () {
+      toast('Cliente guardado');
+      closeModal();
+      loadClientes();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function delCliente(id) {
+    if (!confirm('¿Eliminar este cliente?')) return;
+    call('deleteCliente', [id]).then(function () { toast('Cliente eliminado'); loadClientes(); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
 </script>
 </body>
 </html>
