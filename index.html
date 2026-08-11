@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --primary: #1a56db; --primary-dark: #1e429f; --bg: #f3f4f6; --card: #ffffff;
+    --text: #111827; --muted: #6b7280; --border: #e5e7eb;
+    --green: #059669; --red: #dc2626; --amber: #d97706; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: #111827; color: #e5e7eb; padding: 16px 0; flex-shrink: 0; }
+  .sidebar .brand { padding: 8px 20px 20px; font-weight: 700; font-size: 18px; color: #fff; border-bottom: 1px solid #1f2937; margin-bottom: 12px; }
+  .sidebar nav a { display: block; padding: 10px 20px; color: #9ca3af; text-decoration: none; cursor: pointer; font-size: 14px; }
+  .sidebar nav a:hover { background: #1f2937; color: #fff; }
+  .sidebar nav a.active { background: var(--primary); color: #fff; }
+  .main { flex: 1; padding: 24px; max-width: 1100px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .topbar h1 { margin: 0; font-size: 22px; }
+  .topbar .empresa { color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+  .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .stat .val { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat .lbl { color: var(--muted); font-size: 13px; }
+  button { background: var(--primary); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer; }
+  button:hover { background: var(--primary-dark); }
+  button.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+  button.danger { background: var(--red); }
+  button.danger:hover { background: #b91c1c; }
+  button.small { padding: 5px 10px; font-size: 12px; }
+  input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 12px; background: #fff; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 2px solid var(--border); }
+  td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .badge { padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge.pendiente { background: #fef3c7; color: var(--amber); }
+  .badge.pagada { background: #d1fae5; color: var(--green); }
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 14px; opacity: 0; transform: translateY(10px); transition: all .25s; z-index: 99; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--red); }
+  .toast.ok { background: var(--green); }
+  .view { display: none; }
+  .view.active { display: block; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .item-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .item-row input { margin-bottom: 0; }
+  .item-row .desc { flex: 3; }
+  .item-row .num { flex: 1; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal.show { display: flex; }
+  .modal-content { background: #fff; border-radius: var(--radius); padding: 24px; width: 90%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
+  .totals-preview { background: var(--bg); border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Facturación</div>
+    <nav>
+      <a data-view="dashboard" class="active">Dashboard</a>
+      <a data-view="facturas">Facturas</a>
+      <a data-view="clientes">Clientes</a>
+      <a data-view="gastos">Gastos</a>
+      <a data-view="reportes">Reportes</a>
+      <a data-view="config">Configuración</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="empresa" id="empresaLabel"></span>
+    </div>
+    <section class="view active" id="view-dashboard"></section>
+    <section class="view" id="view-facturas"></section>
+    <section class="view" id="view-clientes"></section>
+    <section class="view" id="view-gastos"></section>
+    <section class="view" id="view-reportes"></section>
+    <section class="view" id="view-config"></section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
+<script>
+  var STATE = { config: {}, view: 'dashboard' };
+  var VIEW_TITLES = { dashboard: 'Dashboard', facturas: 'Facturas', clientes: 'Clientes', gastos: 'Gastos', reportes: 'Reportes', config: 'Configuración' };
+
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(function (s) { s.classList.remove('active'); });
+    document.getElementById('view-' + name).classList.add('active');
+    document.querySelectorAll('.sidebar nav a').forEach(function (a) {
+      a.classList.toggle('active', a.dataset.view === name);
+    });
+    document.getElementById('viewTitle').textContent = VIEW_TITLES[name];
+    STATE.view = name;
+    var loaders = { dashboard: loadDashboard, facturas: loadFacturas, clientes: loadClientes, gastos: loadGastos, reportes: loadReportes, config: loadConfigView };
+    if (loaders[name]) loaders[name]();
+  }
+  document.querySelectorAll('.sidebar nav a').forEach(function (a) {
+    a.addEventListener('click', function () { showView(a.dataset.view); });
+  });
+
+  function call(name, args) {
+    return new Promise(function (resolve, reject) {
+      var fn = google.script.run;
+      fn.withSuccessHandler(function (r) {
+        if (r && r.ok) resolve(r.data);
+        else reject(new Error(r && r.error ? r.error : 'Error desconocido'));
+      }).withFailureHandler(function (err) { reject(new Error(String(err))); });
+      if (args === undefined) fn[name]();
+      else fn[name].apply(null, args);
+    });
+  }
+
+  function toast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || 'ok');
+    setTimeout(function () { t.classList.remove('show'); }, 3000);
+  }
+
+  function fmtMoney(n) {
+    return (STATE.config.moneda_simbolo || '$') + ' ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function mesActual() { return new Date().toISOString().slice(0, 7); }
+
+  function openModal(html) {
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('modal').classList.add('show');
+  }
+  function closeModal() { document.getElementById('modal').classList.remove('show'); }
+  document.getElementById('modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+
+  function init() {
+    call('getConfig').then(function (cfg) {
+      STATE.config = cfg;
+      document.getElementById('empresaLabel').textContent = (cfg.empresa_nombre || '') + ' — ' + (cfg.moneda || '');
+      if (typeof loadDashboard === 'function') loadDashboard();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+  window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
