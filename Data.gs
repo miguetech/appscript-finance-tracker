@@ -82,6 +82,13 @@ function updateRow_(sheet, row, obj, headers) {
   sheet.getRange(row, 1, 1, headers.length).setValues([values]);
 }
 
+function mergeFields_(base, obj) {
+  var out = {};
+  Object.keys(base).forEach(function (k) { out[k] = base[k]; });
+  Object.keys(obj).forEach(function (k) { out[k] = obj[k]; });
+  return out;
+}
+
 function deleteRow_(sheet, row) {
   if (row > 0) sheet.deleteRow(row);
 }
@@ -111,6 +118,7 @@ var Data = {
   appendRow_: appendRow_,
   findRowBy_: findRowBy_,
   updateRow_: updateRow_,
+  mergeFields_: mergeFields_,
   deleteRow_: deleteRow_
 };
 
@@ -127,7 +135,8 @@ function saveCliente_(obj) {
   if (obj.id_cliente) {
     var row = findRowBy_(sh, 'id_cliente', obj.id_cliente, headers);
     if (row < 0) throw new Error('Cliente no encontrado');
-    updateRow_(sh, row, obj, headers);
+    var existing = readRows_(sh).filter(function (c) { return c.id_cliente === obj.id_cliente; })[0] || {};
+    updateRow_(sh, row, mergeFields_(existing, obj), headers);
     return obj;
   }
   obj.id_cliente = Aux.uid('cli');
@@ -176,6 +185,7 @@ function createFactura_(obj) {
   if (!items.length) throw new Error('La factura debe tener al menos un concepto');
   items.forEach(function (it) {
     if (Aux.requireFields(it, ['descripcion', 'cantidad', 'precio_unitario']).length) throw new Error('Concepto incompleto');
+    if (isNaN(Number(it.cantidad)) || isNaN(Number(it.precio_unitario))) throw new Error('Cantidad/precio inválido');
     if (Number(it.cantidad) <= 0 || Number(it.precio_unitario) < 0) throw new Error('Cantidad/precio inválido');
   });
   var t = Aux.calcTotales(items, cfg.iva_porcentaje);
@@ -268,7 +278,8 @@ function saveGasto_(obj) {
   if (obj.id_gasto) {
     var row = findRowBy_(sh, 'id_gasto', obj.id_gasto, headers);
     if (row < 0) throw new Error('Gasto no encontrado');
-    updateRow_(sh, row, obj, headers);
+    var existing = readRows_(sh).filter(function (g) { return g.id_gasto === obj.id_gasto; })[0] || {};
+    updateRow_(sh, row, mergeFields_(existing, obj), headers);
     return obj;
   }
   obj.id_gasto = Aux.uid('gas');

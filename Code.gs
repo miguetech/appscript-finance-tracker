@@ -168,7 +168,7 @@ function saveGasto(obj) {
   return respond_(function () {
     var faltantes = Aux.requireFields(obj, ['descripcion', 'monto']);
     if (faltantes.length) throw new Error('Faltan campos: ' + faltantes.join(', '));
-    if (Number(obj.monto) < 0) throw new Error('Monto inválido');
+    if (isNaN(Number(obj.monto)) || Number(obj.monto) < 0) throw new Error('Monto inválido');
     return Data.saveGasto_(obj);
   });
 }
@@ -223,27 +223,27 @@ function buildPDF(idFactura) {
   var cliente = Data.listClientes_().filter(function (c) { return c.id_cliente === f.id_cliente; })[0] || {};
   var tpl = HtmlService.createHtmlOutputFromFile('pdfTemplate').getContent();
   var rows = items.map(function (it) {
-    return '<tr><td>' + it.descripcion + '</td><td>' + it.cantidad + '</td><td class="num">' + Aux.formatMoney(it.precio_unitario) + '</td><td class="num">' + Aux.formatMoney(it.importe) + '</td></tr>';
+    return '<tr><td>' + Aux.escHtml(it.descripcion) + '</td><td>' + Aux.escHtml(it.cantidad) + '</td><td class="num">' + Aux.escHtml(Aux.formatMoney(it.precio_unitario)) + '</td><td class="num">' + Aux.escHtml(Aux.formatMoney(it.importe)) + '</td></tr>';
   }).join('');
-  var logo = cfg.empresa_logo ? '<img class="logo" src="' + cfg.empresa_logo + '" alt="logo">' : '';
+  var logo = cfg.empresa_logo ? '<img class="logo" src="' + Aux.escHtml(cfg.empresa_logo) + '" alt="logo">' : '';
   var html = tpl
-    .split('${EMPRESA_NOMBRE}').join(cfg.empresa_nombre || '')
-    .split('${EMPRESA_RFC}').join(cfg.empresa_rfc || '')
-    .split('${EMPRESA_DIRECCION}').join(cfg.empresa_direccion || '')
-    .split('${EMPRESA_TELEFONO}').join(cfg.empresa_telefono || '')
-    .split('${EMPRESA_EMAIL}').join(cfg.empresa_email || '')
+    .split('${EMPRESA_NOMBRE}').join(Aux.escHtml(cfg.empresa_nombre || ''))
+    .split('${EMPRESA_RFC}').join(Aux.escHtml(cfg.empresa_rfc || ''))
+    .split('${EMPRESA_DIRECCION}').join(Aux.escHtml(cfg.empresa_direccion || ''))
+    .split('${EMPRESA_TELEFONO}').join(Aux.escHtml(cfg.empresa_telefono || ''))
+    .split('${EMPRESA_EMAIL}').join(Aux.escHtml(cfg.empresa_email || ''))
     .split('${LOGO}').join(logo)
-    .split('${FOLIO}').join(f.folio)
-    .split('${FECHA_EMISION}').join(f.fecha_emision)
-    .split('${FECHA_VENCIMIENTO}').join(f.fecha_vencimiento || '—')
-    .split('${NOMBRE_CLIENTE}').join(f.nombre_cliente)
-    .split('${RFC_CLIENTE}').join(cliente.rfc || '')
-    .split('${DIRECCION_CLIENTE}').join(cliente.direccion || '')
-    .split('${MONEDA_SIMBOLO}').join(cfg.moneda_simbolo || '$')
-    .split('${SUBTOTAL}').join(Aux.formatMoney(f.subtotal))
-    .split('${IVA}').join(Aux.formatMoney(f.iva))
-    .split('${TOTAL}').join(Aux.formatMoney(f.total))
-    .split('${NOTAS}').join(f.notas || '')
+    .split('${FOLIO}').join(Aux.escHtml(f.folio))
+    .split('${FECHA_EMISION}').join(Aux.escHtml(f.fecha_emision))
+    .split('${FECHA_VENCIMIENTO}').join(Aux.escHtml(f.fecha_vencimiento || '—'))
+    .split('${NOMBRE_CLIENTE}').join(Aux.escHtml(f.nombre_cliente))
+    .split('${RFC_CLIENTE}').join(Aux.escHtml(cliente.rfc || ''))
+    .split('${DIRECCION_CLIENTE}').join(Aux.escHtml(cliente.direccion || ''))
+    .split('${MONEDA_SIMBOLO}').join(Aux.escHtml(cfg.moneda_simbolo || '$'))
+    .split('${SUBTOTAL}').join(Aux.escHtml(Aux.formatMoney(f.subtotal)))
+    .split('${IVA}').join(Aux.escHtml(Aux.formatMoney(f.iva)))
+    .split('${TOTAL}').join(Aux.escHtml(Aux.formatMoney(f.total)))
+    .split('${NOTAS}').join(Aux.escHtml(f.notas || ''))
     .split('${ITEMS_ROWS}').join(rows);
   var blob = Utilities.newBlob(html, 'text/html', 'factura_' + f.folio + '.html');
   return blob.getAs('application/pdf').setName('Factura_' + f.folio + '.pdf');

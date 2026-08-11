@@ -248,6 +248,15 @@
 
   function mesActual() { return new Date().toISOString().slice(0, 7); }
 
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function openModal(html) {
     document.getElementById('modalContent').innerHTML = html;
     document.getElementById('modal').classList.add('show');
@@ -288,9 +297,9 @@
           ? '<button class="small ghost" onclick="markFactura(\'' + f.id_factura + '\',\'pendiente\')">Marcar pendiente</button>'
           : '<button class="small ghost" onclick="markFactura(\'' + f.id_factura + '\',\'pagada\')">Marcar pagada</button>';
         return '<tr>' +
-          '<td><strong>' + f.folio + '</strong></td>' +
-          '<td>' + f.nombre_cliente + '</td>' +
-          '<td>' + f.fecha_emision + '</td>' +
+          '<td><strong>' + esc(f.folio) + '</strong></td>' +
+          '<td>' + esc(f.nombre_cliente) + '</td>' +
+          '<td>' + esc(f.fecha_emision) + '</td>' +
           '<td>' + fmtMoney(f.total) + '</td>' +
           '<td>' + badge + '</td>' +
           '<td>' +
@@ -332,15 +341,15 @@
     call('getFactura', [id]).then(function (d) {
       var f = d.factura;
       var rows = d.items.map(function (it) {
-        return '<tr><td>' + it.descripcion + '</td><td>' + it.cantidad + '</td><td>' + fmtMoney(it.precio_unitario) + '</td><td>' + fmtMoney(it.importe) + '</td></tr>';
+        return '<tr><td>' + esc(it.descripcion) + '</td><td>' + it.cantidad + '</td><td>' + fmtMoney(it.precio_unitario) + '</td><td>' + fmtMoney(it.importe) + '</td></tr>';
       }).join('');
       openModal(
-        '<h2>Factura ' + f.folio + '</h2>' +
-        '<div class="muted">Cliente: ' + f.nombre_cliente + '</div>' +
-        '<div class="muted">Emisión: ' + f.fecha_emision + '</div>' +
+        '<h2>Factura ' + esc(f.folio) + '</h2>' +
+        '<div class="muted">Cliente: ' + esc(f.nombre_cliente) + '</div>' +
+        '<div class="muted">Emisión: ' + esc(f.fecha_emision) + '</div>' +
         '<table><thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unitario</th><th>Importe</th></tr></thead><tbody>' + rows + '</tbody></table>' +
         '<div class="totals-preview">Subtotal: ' + fmtMoney(f.subtotal) + '<br>IVA: ' + fmtMoney(f.iva) + '<br><strong>Total: ' + fmtMoney(f.total) + '</strong></div>' +
-        (f.notas ? '<div class="muted">Notas: ' + f.notas + '</div>' : '') +
+        (f.notas ? '<div class="muted">Notas: ' + esc(f.notas) + '</div>' : '') +
         '<br><button class="ghost" onclick="downloadPDF(\'' + f.id_factura + '\')">Descargar PDF</button> ' +
         '<button onclick="closeModal()">Cerrar</button>'
       );
@@ -376,7 +385,7 @@
   function openNewInvoice() {
     call('listClientes').then(function (clientes) {
       var opts = clientes.map(function (c) {
-        return '<option value="' + c.id_cliente + '">' + c.nombre + '</option>';
+        return '<option value="' + c.id_cliente + '">' + esc(c.nombre) + '</option>';
       }).join('');
       openModal(
         '<h2>Nueva factura</h2>' +
@@ -409,7 +418,7 @@
     call('saveCliente', [{ nombre: document.getElementById('qcNombre').value, rfc: document.getElementById('qcRfc').value, email: document.getElementById('qcEmail').value }])
       .then(function (c) {
         var sel = document.getElementById('selCliente');
-        sel.insertAdjacentHTML('afterbegin', '<option value="' + c.id_cliente + '" selected>' + c.nombre + '</option>');
+        sel.insertAdjacentHTML('afterbegin', '<option value="' + c.id_cliente + '" selected>' + esc(c.nombre) + '</option>');
         document.getElementById('quickClientBox').innerHTML = '';
         toast('Cliente creado');
       }).catch(function (e) { toast(e.message, 'error'); });
@@ -450,7 +459,7 @@
     var tbody = document.getElementById('tbodyClientes');
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="muted">Sin clientes</td></tr>'; return; }
     tbody.innerHTML = data.map(function (c) {
-      return '<tr><td><strong>' + c.nombre + '</strong></td><td>' + (c.rfc || '') + '</td><td>' + (c.email || '') + '</td><td>' + (c.telefono || '') + '</td>' +
+      return '<tr><td><strong>' + esc(c.nombre) + '</strong></td><td>' + esc(c.rfc || '') + '</td><td>' + esc(c.email || '') + '</td><td>' + esc(c.telefono || '') + '</td>' +
         '<td><button class="small ghost" onclick="openClienteForm(\'' + c.id_cliente + '\')">Editar</button> ' +
         '<button class="small danger" onclick="delCliente(\'' + c.id_cliente + '\')">Eliminar</button></td></tr>';
     }).join('');
@@ -467,11 +476,11 @@
     var c = CLIENTES.filter(function (x) { return x.id_cliente === id; })[0] || {};
     openModal(
       '<h2>' + (id ? 'Editar cliente' : 'Nuevo cliente') + '</h2>' +
-      '<label>Nombre *</label><input id="cliNombre" value="' + (c.nombre || '') + '">' +
-      '<label>RFC</label><input id="cliRfc" value="' + (c.rfc || '') + '">' +
-      '<label>Email</label><input id="cliEmail" value="' + (c.email || '') + '">' +
-      '<label>Teléfono</label><input id="cliTel" value="' + (c.telefono || '') + '">' +
-      '<label>Dirección</label><textarea id="cliDir" rows="2">' + (c.direccion || '') + '</textarea>' +
+      '<label>Nombre *</label><input id="cliNombre" value="' + esc(c.nombre || '') + '">' +
+      '<label>RFC</label><input id="cliRfc" value="' + esc(c.rfc || '') + '">' +
+      '<label>Email</label><input id="cliEmail" value="' + esc(c.email || '') + '">' +
+      '<label>Teléfono</label><input id="cliTel" value="' + esc(c.telefono || '') + '">' +
+      '<label>Dirección</label><textarea id="cliDir" rows="2">' + esc(c.direccion || '') + '</textarea>' +
       '<button onclick="saveClienteForm(\'' + (c.id_cliente || '') + '\')">Guardar</button> ' +
       '<button onclick="closeModal()">Cancelar</button>'
     );
@@ -507,8 +516,8 @@
       var tbody = document.getElementById('tbodyGastos');
       if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted">Sin gastos</td></tr>'; return; }
       tbody.innerHTML = data.map(function (g) {
-        return '<tr><td>' + g.fecha + '</td><td>' + (g.categoria || '') + '</td><td>' + g.descripcion + '</td>' +
-          '<td><strong>' + fmtMoney(g.monto) + '</strong></td><td>' + (g.proveedor || '') + '</td>' +
+        return '<tr><td>' + esc(g.fecha) + '</td><td>' + esc(g.categoria || '') + '</td><td>' + esc(g.descripcion) + '</td>' +
+          '<td><strong>' + fmtMoney(g.monto) + '</strong></td><td>' + esc(g.proveedor || '') + '</td>' +
           '<td><button class="small ghost" onclick="openGastoForm(\'' + g.id_gasto + '\')">Editar</button> ' +
           '<button class="small danger" onclick="delGasto(\'' + g.id_gasto + '\')">Eliminar</button></td></tr>';
       }).join('');
@@ -520,7 +529,7 @@
   function catOptions(selected) {
     return String(STATE.config.categorias_gastos || '').split(',').map(function (c) {
       c = c.trim();
-      return c ? '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>' : '';
+      return c ? '<option value="' + esc(c) + '"' + (c === selected ? ' selected' : '') + '>' + esc(c) + '</option>' : '';
     }).join('');
   }
 
@@ -532,12 +541,12 @@
     }).join('');
     openModal(
       '<h2>' + (id ? 'Editar gasto' : 'Registrar gasto') + '</h2>' +
-      '<label>Fecha</label><input type="date" id="gasFecha" value="' + (g.fecha || new Date().toISOString().slice(0, 10)) + '">' +
+      '<label>Fecha</label><input type="date" id="gasFecha" value="' + esc(g.fecha || new Date().toISOString().slice(0, 10)) + '">' +
       '<label>Categoría</label><select id="gasCat"><option value="">—</option>' + catOptions(g.categoria) + '</select>' +
-      '<label>Descripción *</label><input id="gasDesc" value="' + (g.descripcion || '') + '">' +
-      '<label>Monto *</label><input id="gasMonto" type="number" min="0" step="0.01" value="' + (g.monto !== undefined ? g.monto : '') + '">' +
+      '<label>Descripción *</label><input id="gasDesc" value="' + esc(g.descripcion || '') + '">' +
+      '<label>Monto *</label><input id="gasMonto" type="number" min="0" step="0.01" value="' + esc(g.monto !== undefined ? g.monto : '') + '">' +
       '<label>Método de pago</label><select id="gasMetodo">' + metodos + '</select>' +
-      '<label>Proveedor</label><input id="gasProv" value="' + (g.proveedor || '') + '">' +
+      '<label>Proveedor</label><input id="gasProv" value="' + esc(g.proveedor || '') + '">' +
       '<button onclick="saveGastoForm(\'' + (g.id_gasto || '') + '\')">Guardar</button> ' +
       '<button onclick="closeModal()">Cancelar</button>'
     );
@@ -574,11 +583,11 @@
       document.getElementById('rUtilidad').textContent = fmtMoney(d.utilidad);
       var cats = Object.keys(d.gastos_por_categoria);
       document.getElementById('listaCategorias').innerHTML = cats.length
-        ? cats.map(function (c) { return '<li>' + c + ': <strong>' + fmtMoney(d.gastos_por_categoria[c]) + '</strong></li>'; }).join('')
+        ? cats.map(function (c) { return '<li>' + esc(c) + ': <strong>' + fmtMoney(d.gastos_por_categoria[c]) + '</strong></li>'; }).join('')
         : '<li>Sin gastos en el mes</li>';
       var tbody = document.getElementById('tbodyTopClientes');
       tbody.innerHTML = d.top_clientes.length
-        ? d.top_clientes.map(function (t) { return '<tr><td>' + t.nombre + '</td><td>' + fmtMoney(t.total) + '</td></tr>'; }).join('')
+        ? d.top_clientes.map(function (t) { return '<tr><td>' + esc(t.nombre) + '</td><td>' + fmtMoney(t.total) + '</td></tr>'; }).join('')
         : '<tr><td colspan="2" class="muted">Sin facturas en el mes</td></tr>';
     }).catch(function (e) { toast(e.message, 'error'); });
   }

@@ -30,11 +30,21 @@ function requireFields(obj, campos) {
   return campos.filter(function (c) { return obj[c] === undefined || obj[c] === null || String(obj[c]).trim() === ''; });
 }
 
+function escHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 var Aux = {
   uid: uid,
   round2: round2,
   calcTotales: calcTotales,
   formatMoney: formatMoney,
   parseCSV: parseCSV,
-  requireFields: requireFields
+  requireFields: requireFields,
+  escHtml: escHtml
 };
