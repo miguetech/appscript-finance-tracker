@@ -77,7 +77,19 @@
       <h1 id="viewTitle">Dashboard</h1>
       <span class="empresa" id="empresaLabel"></span>
     </div>
-    <section class="view active" id="view-dashboard"></section>
+    <section class="view active" id="view-dashboard">
+      <div class="grid-stats">
+        <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="stFacturado">—</div></div>
+        <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val" id="stPendiente">—</div></div>
+        <div class="stat"><div class="lbl">Gastos (mes)</div><div class="val" id="stGastos">—</div></div>
+        <div class="stat"><div class="lbl">Utilidad (mes)</div><div class="val" id="stUtilidad">—</div></div>
+      </div>
+      <div class="card">
+        <h3>Acciones rápidas</h3>
+        <button onclick="openNewInvoice()">Nueva factura</button>
+        <button class="ghost" onclick="showView('gastos')">Registrar gasto</button>
+      </div>
+    </section>
     <section class="view" id="view-facturas"></section>
     <section class="view" id="view-clientes"></section>
     <section class="view" id="view-gastos"></section>
@@ -144,6 +156,17 @@
   }
   function closeModal() { document.getElementById('modal').classList.remove('show'); }
   document.getElementById('modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+
+  function loadDashboard() {
+    call('getReportes', [mesActual()]).then(function (d) {
+      document.getElementById('stFacturado').textContent = fmtMoney(d.facturado);
+      document.getElementById('stPendiente').textContent = fmtMoney(d.pendiente);
+      document.getElementById('stGastos').textContent = fmtMoney(d.gastos_total);
+      document.getElementById('stUtilidad').textContent = fmtMoney(d.utilidad);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function openNewInvoice() { showView('facturas'); }
 
   function init() {
     call('getConfig').then(function (cfg) {
