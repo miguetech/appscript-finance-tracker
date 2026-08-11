@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 40px; }
+  .header { width: 100%; border-bottom: 3px solid #1a56db; padding-bottom: 16px; margin-bottom: 24px; }
+  .header:after { content: ''; display: table; clear: both; }
+  .empresa { float: left; font-size: 14px; }
+  .empresa h1 { margin: 0 0 4px 0; font-size: 22px; color: #1a56db; }
+  .logo { float: right; max-height: 80px; max-width: 200px; }
+  .folio-box { text-align: right; margin-bottom: 24px; }
+  .folio-box .folio { font-size: 20px; font-weight: bold; }
+  .grid { width: 100%; margin-bottom: 24px; }
+  .grid td { vertical-align: top; font-size: 14px; }
+  .grid .label { color: #666; font-size: 12px; text-transform: uppercase; }
+  table.items { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  table.items th { background: #1a56db; color: #fff; text-align: left; padding: 8px; font-size: 13px; }
+  table.items td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+  table.items td.num { text-align: right; }
+  .totals { float: right; width: 260px; }
+  .totals table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .totals td { padding: 4px 8px; }
+  .totals tr.total td { font-size: 18px; font-weight: bold; border-top: 2px solid #1a56db; }
+  .notas { clear: both; font-size: 13px; color: #444; margin-top: 32px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="empresa">
+      <h1>${EMPRESA_NOMBRE}</h1>
+      <div>${EMPRESA_RFC}</div>
+      <div>${EMPRESA_DIRECCION}</div>
+      <div>Tel: ${EMPRESA_TELEFONO} &nbsp; ${EMPRESA_EMAIL}</div>
+    </div>
+    ${LOGO}
+  </div>
+  <div class="folio-box">
+    <div class="folio">FACTURA ${FOLIO}</div>
+    <div>Fecha de emisión: ${FECHA_EMISION}</div>
+    <div>Fecha de vencimiento: ${FECHA_VENCIMIENTO}</div>
+  </div>
+  <table class="grid">
+    <tr>
+      <td>
+        <div class="label">Facturar a</div>
+        <div><strong>${NOMBRE_CLIENTE}</strong></div>
+        <div>${RFC_CLIENTE}</div>
+        <div>${DIRECCION_CLIENTE}</div>
+      </td>
+    </tr>
+  </table>
+  <table class="items">
+    <thead>
+      <tr><th>Descripción</th><th style="width:70px">Cant.</th><th style="width:110px" class="num">P. Unitario</th><th style="width:120px" class="num">Importe</th></tr>
+    </thead>
+    <tbody>
+      ${ITEMS_ROWS}
+    </tbody>
+  </table>
+  <div class="totals">
+    <table>
+      <tr><td>Subtotal</td><td class="num">${MONEDA_SIMBOLO}${SUBTOTAL}</td></tr>
+      <tr><td>IVA</td><td class="num">${MONEDA_SIMBOLO}${IVA}</td></tr>
+      <tr class="total"><td>Total</td><td class="num">${MONEDA_SIMBOLO}${TOTAL}</td></tr>
+    </table>
+  </div>
+  <div class="notas">${NOTAS}</div>
+</body>
+</html>

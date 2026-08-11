@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --primary: #1a56db; --primary-dark: #1e429f; --bg: #f3f4f6; --card: #ffffff;
+    --text: #111827; --muted: #6b7280; --border: #e5e7eb;
+    --green: #059669; --red: #dc2626; --amber: #d97706; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: #111827; color: #e5e7eb; padding: 16px 0; flex-shrink: 0; }
+  .sidebar .brand { padding: 8px 20px 20px; font-weight: 700; font-size: 18px; color: #fff; border-bottom: 1px solid #1f2937; margin-bottom: 12px; }
+  .sidebar nav a { display: block; padding: 10px 20px; color: #9ca3af; text-decoration: none; cursor: pointer; font-size: 14px; }
+  .sidebar nav a:hover { background: #1f2937; color: #fff; }
+  .sidebar nav a.active { background: var(--primary); color: #fff; }
+  .main { flex: 1; padding: 24px; max-width: 1100px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .topbar h1 { margin: 0; font-size: 22px; }
+  .topbar .empresa { color: var(--muted); font-size: 14px; }
+  .card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+  .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .stat .val { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .stat .lbl { color: var(--muted); font-size: 13px; }
+  button { background: var(--primary); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font-size: 14px; cursor: pointer; }
+  button:hover { background: var(--primary-dark); }
+  button.ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+  button.danger { background: var(--red); }
+  button.danger:hover { background: #b91c1c; }
+  button.small { padding: 5px 10px; font-size: 12px; }
+  input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 12px; background: #fff; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 2px solid var(--border); }
+  td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .badge { padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge.pendiente { background: #fef3c7; color: var(--amber); }
+  .badge.pagada { background: #d1fae5; color: var(--green); }
+  .toast { position: fixed; bottom: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 14px; opacity: 0; transform: translateY(10px); transition: all .25s; z-index: 99; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--red); }
+  .toast.ok { background: var(--green); }
+  .view { display: none; }
+  .view.active { display: block; }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .item-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .item-row input { margin-bottom: 0; }
+  .item-row .desc { flex: 3; }
+  .item-row .num { flex: 1; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal.show { display: flex; }
+  .modal-content { background: #fff; border-radius: var(--radius); padding: 24px; width: 90%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
+  .totals-preview { background: var(--bg); border-radius: 8px; padding: 12px 16px; font-size: 14px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Facturación</div>
+    <nav>
+      <a data-view="dashboard" class="active">Dashboard</a>
+      <a data-view="facturas">Facturas</a>
+      <a data-view="clientes">Clientes</a>
+      <a data-view="gastos">Gastos</a>
+      <a data-view="reportes">Reportes</a>
+      <a data-view="config">Configuración</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="empresa" id="empresaLabel"></span>
+    </div>
+    <section class="view active" id="view-dashboard">
+      <div class="grid-stats">
+        <div class="stat"><div class="lbl">Facturado (mes)</div><div class="val" id="stFacturado">—</div></div>
+        <div class="stat"><div class="lbl">Pendiente de cobro</div><div class="val" id="stPendiente">—</div></div>
+        <div class="stat"><div class="lbl">Gastos (mes)</div><div class="val" id="stGastos">—</div></div>
+        <div class="stat"><div class="lbl">Utilidad (mes)</div><div class="val" id="stUtilidad">—</div></div>
+      </div>
+      <div class="card">
+        <h3>Acciones rápidas</h3>
+        <button onclick="openNewInvoice()">Nueva factura</button>
+        <button class="ghost" onclick="showView('gastos')">Registrar gasto</button>
+      </div>
+    </section>
+    <section class="view" id="view-facturas">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Estado</label><select id="filtroEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="pagada">Pagada</option></select></div>
+          <div><label>Mes</label><input type="month" id="filtroMes"></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="applyFiltrosFacturas()">Filtrar</button></div>
+          <div style="flex:0;padding-bottom:12px"><button class="ghost" onclick="openNewInvoice()">Nueva factura</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbodyFacturas"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="view" id="view-clientes">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Buscar</label><input id="buscarCliente" oninput="buscarClientes()" placeholder="Nombre o RFC"></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="openClienteForm()">Nuevo cliente</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Nombre</th><th>RFC</th><th>Email</th><th>Teléfono</th><th></th></tr></thead>
+          <tbody id="tbodyClientes"><tr><td colspan="5" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="view" id="view-gastos">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Mes</label><input type="month" id="filtroGastoMes"></div>
+          <div><label>Categoría</label><select id="filtroGastoCat"><option value="">Todas</option></select></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="applyFiltrosGastos()">Filtrar</button></div>
+          <div style="flex:0;padding-bottom:12px"><button class="ghost" onclick="openGastoForm()">Registrar gasto</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Proveedor</th><th></th></tr></thead>
+          <tbody id="tbodyGastos"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="view" id="view-reportes">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Mes</label><input type="month" id="reporteMes" value=""></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="loadReportes()">Actualizar</button></div>
+        </div>
+      </div>
+      <div class="grid-stats">
+        <div class="stat"><div class="lbl">Facturado</div><div class="val" id="rFacturado">—</div></div>
+        <div class="stat"><div class="lbl">Cobrado</div><div class="val" id="rCobrado">—</div></div>
+        <div class="stat"><div class="lbl">Pendiente</div><div class="val" id="rPendiente">—</div></div>
+        <div class="stat"><div class="lbl">Gastos</div><div class="val" id="rGastos">—</div></div>
+        <div class="stat"><div class="lbl">Utilidad</div><div class="val" id="rUtilidad">—</div></div>
+      </div>
+      <div class="card">
+        <h3>Gastos por categoría</h3>
+        <ul id="listaCategorias" class="muted"></ul>
+      </div>
+      <div class="card">
+        <h3>Top 5 clientes</h3>
+        <table>
+          <thead><tr><th>Cliente</th><th>Total</th></tr></thead>
+          <tbody id="tbodyTopClientes"></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="view" id="view-config">
+      <div class="card">
+        <h3>Datos de la empresa</h3>
+        <div class="row">
+          <div><label>Nombre *</label><input id="cfEmpresa" value=""></div>
+          <div><label>RFC</label><input id="cfRfc"></div>
+        </div>
+        <label>Dirección</label><input id="cfDir">
+        <div class="row">
+          <div><label>Teléfono</label><input id="cfTel"></div>
+          <div><label>Email</label><input id="cfEmail"></div>
+        </div>
+        <label>Logo (URL)</label><input id="cfLogo" placeholder="https://...">
+      </div>
+      <div class="card">
+        <h3>Configuración de facturación</h3>
+        <div class="row">
+          <div><label>Moneda</label><input id="cfMoneda" placeholder="USD"></div>
+          <div><label>Símbolo</label><input id="cfSimbolo" placeholder="$"></div>
+        </div>
+        <div class="row">
+          <div><label>Prefijo de folio *</label><input id="cfPrefijo" placeholder="FAC-"></div>
+          <div><label>Contador actual</label><input id="cfContador" type="number" min="1"></div>
+        </div>
+        <div class="row">
+          <div><label>IVA %</label><input id="cfIva" type="number" min="0" step="0.01"></div>
+          <div><label>Categorías de gastos (separadas por coma)</label><input id="cfCats"></div>
+        </div>
+        <button onclick="saveConfigForm()">Guardar configuración</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="modal-content" id="modalContent"></div></div>
+<script>
+  var STATE = { config: {}, view: 'dashboard' };
+  var VIEW_TITLES = { dashboard: 'Dashboard', facturas: 'Facturas', clientes: 'Clientes', gastos: 'Gastos', reportes: 'Reportes', config: 'Configuración' };
+
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(function (s) { s.classList.remove('active'); });
+    document.getElementById('view-' + name).classList.add('active');
+    document.querySelectorAll('.sidebar nav a').forEach(function (a) {
+      a.classList.toggle('active', a.dataset.view === name);
+    });
+    document.getElementById('viewTitle').textContent = VIEW_TITLES[name];
+    STATE.view = name;
+    var loaders = {
+      dashboard: typeof loadDashboard === 'function' ? loadDashboard : null,
+      facturas: typeof loadFacturas === 'function' ? loadFacturas : null,
+      clientes: typeof loadClientes === 'function' ? loadClientes : null,
+      gastos: typeof loadGastos === 'function' ? loadGastos : null,
+      reportes: typeof loadReportes === 'function' ? loadReportes : null,
+      config: typeof loadConfigView === 'function' ? loadConfigView : null
+    };
+    if (loaders[name]) loaders[name]();
+  }
+  document.querySelectorAll('.sidebar nav a').forEach(function (a) {
+    a.addEventListener('click', function () { showView(a.dataset.view); });
+  });
+
+  function call(name, args) {
+    return new Promise(function (resolve, reject) {
+      var fn = google.script.run;
+      fn.withSuccessHandler(function (r) {
+        if (r && r.ok) resolve(r.data);
+        else reject(new Error(r && r.error ? r.error : 'Error desconocido'));
+      }).withFailureHandler(function (err) { reject(new Error(String(err))); });
+      if (args === undefined) fn[name]();
+      else fn[name].apply(null, args);
+    });
+  }
+
+  function toast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || 'ok');
+    setTimeout(function () { t.classList.remove('show'); }, 3000);
+  }
+
+  function fmtMoney(n) {
+    return (STATE.config.moneda_simbolo || '$') + ' ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function mesActual() { return new Date().toISOString().slice(0, 7); }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function openModal(html) {
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('modal').classList.add('show');
+  }
+  function closeModal() { document.getElementById('modal').classList.remove('show'); }
+  document.getElementById('modal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+
+  function loadDashboard() {
+    call('getReportes', [mesActual()]).then(function (d) {
+      document.getElementById('stFacturado').textContent = fmtMoney(d.facturado);
+      document.getElementById('stPendiente').textContent = fmtMoney(d.pendiente);
+      document.getElementById('stGastos').textContent = fmtMoney(d.gastos_total);
+      document.getElementById('stUtilidad').textContent = fmtMoney(d.utilidad);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function openNewInvoice() { showView('facturas'); }
+
+  function init() {
+    call('getConfig').then(function (cfg) {
+      STATE.config = cfg;
+      document.getElementById('empresaLabel').textContent = (cfg.empresa_nombre || '') + ' — ' + (cfg.moneda || '');
+      if (typeof loadDashboard === 'function') loadDashboard();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+  var FACTURAS = [];
+
+  function loadFacturas(openNew) {
+    var estado = document.getElementById('filtroEstado').value;
+    var mes = document.getElementById('filtroMes').value;
+    call('listFacturas', [{ estado: estado, mes: mes }]).then(function (data) {
+      FACTURAS = data;
+      var tbody = document.getElementById('tbodyFacturas');
+      if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted">Sin facturas</td></tr>'; return; }
+      tbody.innerHTML = data.map(function (f) {
+        var badge = f.estado === 'pagada' ? '<span class="badge pagada">Pagada</span>' : '<span class="badge pendiente">Pendiente</span>';
+        var btnEstado = f.estado === 'pagada'
+          ? '<button class="small ghost" onclick="markFactura(\'' + f.id_factura + '\',\'pendiente\')">Marcar pendiente</button>'
+          : '<button class="small ghost" onclick="markFactura(\'' + f.id_factura + '\',\'pagada\')">Marcar pagada</button>';
+        return '<tr>' +
+          '<td><strong>' + esc(f.folio) + '</strong></td>' +
+          '<td>' + esc(f.nombre_cliente) + '</td>' +
+          '<td>' + esc(f.fecha_emision) + '</td>' +
+          '<td>' + fmtMoney(f.total) + '</td>' +
+          '<td>' + badge + '</td>' +
+          '<td>' +
+            '<button class="small ghost" onclick="openInvoiceDetail(\'' + f.id_factura + '\')">Ver</button> ' +
+            '<button class="small ghost" onclick="downloadPDF(\'' + f.id_factura + '\')">PDF</button> ' +
+            btnEstado + ' ' +
+            '<button class="small danger" onclick="delFactura(\'' + f.id_factura + '\')">Eliminar</button>' +
+          '</td></tr>';
+      }).join('');
+      if (openNew) openNewInvoice();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function applyFiltrosFacturas() { loadFacturas(false); }
+
+  function markFactura(id, estado) {
+    call('setEstadoFactura', [id, estado]).then(function () {
+      toast('Factura ' + (estado === 'pagada' ? 'pagada' : 'pendiente'));
+      loadFacturas(false);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function delFactura(id) {
+    if (!confirm('¿Eliminar esta factura y sus conceptos?')) return;
+    call('deleteFactura', [id]).then(function () { toast('Factura eliminada'); loadFacturas(false); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function downloadPDF(id) {
+    google.script.run.withSuccessHandler(function (b64) {
+      var a = document.createElement('a');
+      a.href = 'data:application/pdf;base64,' + b64;
+      a.download = 'Factura_' + id + '.pdf';
+      a.click();
+    }).withFailureHandler(function (err) { toast(String(err), 'error'); }).buildPDF(id);
+  }
+
+  function openInvoiceDetail(id) {
+    call('getFactura', [id]).then(function (d) {
+      var f = d.factura;
+      var rows = d.items.map(function (it) {
+        return '<tr><td>' + esc(it.descripcion) + '</td><td>' + it.cantidad + '</td><td>' + fmtMoney(it.precio_unitario) + '</td><td>' + fmtMoney(it.importe) + '</td></tr>';
+      }).join('');
+      openModal(
+        '<h2>Factura ' + esc(f.folio) + '</h2>' +
+        '<div class="muted">Cliente: ' + esc(f.nombre_cliente) + '</div>' +
+        '<div class="muted">Emisión: ' + esc(f.fecha_emision) + '</div>' +
+        '<table><thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unitario</th><th>Importe</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div class="totals-preview">Subtotal: ' + fmtMoney(f.subtotal) + '<br>IVA: ' + fmtMoney(f.iva) + '<br><strong>Total: ' + fmtMoney(f.total) + '</strong></div>' +
+        (f.notas ? '<div class="muted">Notas: ' + esc(f.notas) + '</div>' : '') +
+        '<br><button class="ghost" onclick="downloadPDF(\'' + f.id_factura + '\')">Descargar PDF</button> ' +
+        '<button onclick="closeModal()">Cerrar</button>'
+      );
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function addItemRow() {
+    var box = document.getElementById('itemsBox');
+    var div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML =
+      '<input class="desc" placeholder="Descripción">' +
+      '<input class="num" type="number" min="0" step="0.01" placeholder="Cant." value="1">' +
+      '<input class="num" type="number" min="0" step="0.01" placeholder="Precio">' +
+      '<button class="small danger" onclick="this.parentNode.remove(); updatePreview()">✕</button>';
+    box.appendChild(div);
+    updatePreview();
+  }
+
+  function updatePreview() {
+    var rows = document.querySelectorAll('#itemsBox .item-row');
+    var subtotal = 0;
+    rows.forEach(function (r) {
+      var inputs = r.querySelectorAll('input');
+      subtotal += Number(inputs[1].value || 0) * Number(inputs[2].value || 0);
+    });
+    var ivaPct = Number(STATE.config.iva_porcentaje) || 0;
+    var iva = subtotal * ivaPct / 100;
+    document.getElementById('previewTotales').innerHTML =
+      'Subtotal: ' + fmtMoney(subtotal) + '<br>IVA (' + ivaPct + '%): ' + fmtMoney(iva) + '<br><strong>Total: ' + fmtMoney(subtotal + iva) + '</strong>';
+  }
+
+  function openNewInvoice() {
+    call('listClientes').then(function (clientes) {
+      var opts = clientes.map(function (c) {
+        return '<option value="' + c.id_cliente + '">' + esc(c.nombre) + '</option>';
+      }).join('');
+      openModal(
+        '<h2>Nueva factura</h2>' +
+        '<label>Cliente</label><select id="selCliente">' + (opts || '<option value="">Sin clientes</option>') + '</select>' +
+        '<button class="small ghost" onclick="openQuickClient()">Crear cliente rápido</button>' +
+        '<div id="quickClientBox"></div>' +
+        '<label>Conceptos</label><div id="itemsBox"></div>' +
+        '<button class="small ghost" onclick="addItemRow()">+ Agregar concepto</button>' +
+        '<div class="totals-preview" id="previewTotales"></div>' +
+        '<label>Fecha de emisión</label><input type="date" id="fechaEmision" value="' + new Date().toISOString().slice(0, 10) + '">' +
+        '<label>Fecha de vencimiento</label><input type="date" id="fechaVencimiento">' +
+        '<label>Notas</label><textarea id="notasFactura" rows="2"></textarea>' +
+        '<button onclick="saveInvoice()">Guardar factura</button> <button onclick="closeModal()">Cancelar</button>'
+      );
+      addItemRow();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function openQuickClient() {
+    var box = document.getElementById('quickClientBox');
+    box.innerHTML =
+      '<div class="card" style="margin-top:8px">' +
+      '<label>Nombre</label><input id="qcNombre">' +
+      '<label>RFC</label><input id="qcRfc">' +
+      '<label>Email</label><input id="qcEmail">' +
+      '<button class="small" onclick="saveQuickClient()">Guardar cliente</button></div>';
+  }
+
+  function saveQuickClient() {
+    call('saveCliente', [{ nombre: document.getElementById('qcNombre').value, rfc: document.getElementById('qcRfc').value, email: document.getElementById('qcEmail').value }])
+      .then(function (c) {
+        var sel = document.getElementById('selCliente');
+        sel.insertAdjacentHTML('afterbegin', '<option value="' + c.id_cliente + '" selected>' + esc(c.nombre) + '</option>');
+        document.getElementById('quickClientBox').innerHTML = '';
+        toast('Cliente creado');
+      }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function saveInvoice() {
+    var items = [];
+    document.querySelectorAll('#itemsBox .item-row').forEach(function (r) {
+      var i = r.querySelectorAll('input');
+      items.push({ descripcion: i[0].value, cantidad: Number(i[1].value), precio_unitario: Number(i[2].value) });
+    });
+    var payload = {
+      id_cliente: document.getElementById('selCliente').value,
+      fecha_emision: document.getElementById('fechaEmision').value,
+      fecha_vencimiento: document.getElementById('fechaVencimiento').value,
+      notas: document.getElementById('notasFactura').value,
+      items: items
+    };
+    call('createFactura', [payload]).then(function (f) {
+      toast('Factura ' + f.folio + ' creada');
+      closeModal();
+      loadFacturas(false);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  window.addEventListener('DOMContentLoaded', init);
+
+  var CLIENTES = [];
+
+  function loadClientes() {
+    call('listClientes').then(function (data) {
+      CLIENTES = data;
+      renderClientes(data);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function renderClientes(data) {
+    var tbody = document.getElementById('tbodyClientes');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="muted">Sin clientes</td></tr>'; return; }
+    tbody.innerHTML = data.map(function (c) {
+      return '<tr><td><strong>' + esc(c.nombre) + '</strong></td><td>' + esc(c.rfc || '') + '</td><td>' + esc(c.email || '') + '</td><td>' + esc(c.telefono || '') + '</td>' +
+        '<td><button class="small ghost" onclick="openClienteForm(\'' + c.id_cliente + '\')">Editar</button> ' +
+        '<button class="small danger" onclick="delCliente(\'' + c.id_cliente + '\')">Eliminar</button></td></tr>';
+    }).join('');
+  }
+
+  function buscarClientes() {
+    var q = document.getElementById('buscarCliente').value.toLowerCase();
+    renderClientes(CLIENTES.filter(function (c) {
+      return (c.nombre || '').toLowerCase().indexOf(q) !== -1 || (c.rfc || '').toLowerCase().indexOf(q) !== -1;
+    }));
+  }
+
+  function openClienteForm(id) {
+    var c = CLIENTES.filter(function (x) { return x.id_cliente === id; })[0] || {};
+    openModal(
+      '<h2>' + (id ? 'Editar cliente' : 'Nuevo cliente') + '</h2>' +
+      '<label>Nombre *</label><input id="cliNombre" value="' + esc(c.nombre || '') + '">' +
+      '<label>RFC</label><input id="cliRfc" value="' + esc(c.rfc || '') + '">' +
+      '<label>Email</label><input id="cliEmail" value="' + esc(c.email || '') + '">' +
+      '<label>Teléfono</label><input id="cliTel" value="' + esc(c.telefono || '') + '">' +
+      '<label>Dirección</label><textarea id="cliDir" rows="2">' + esc(c.direccion || '') + '</textarea>' +
+      '<button onclick="saveClienteForm(\'' + (c.id_cliente || '') + '\')">Guardar</button> ' +
+      '<button onclick="closeModal()">Cancelar</button>'
+    );
+  }
+
+  function saveClienteForm(id) {
+    var payload = {
+      id_cliente: id || undefined,
+      nombre: document.getElementById('cliNombre').value,
+      rfc: document.getElementById('cliRfc').value,
+      email: document.getElementById('cliEmail').value,
+      telefono: document.getElementById('cliTel').value,
+      direccion: document.getElementById('cliDir').value
+    };
+    call('saveCliente', [payload]).then(function () {
+      toast('Cliente guardado');
+      closeModal();
+      loadClientes();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function delCliente(id) {
+    if (!confirm('¿Eliminar este cliente?')) return;
+    call('deleteCliente', [id]).then(function () { toast('Cliente eliminado'); loadClientes(); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function loadGastos() {
+    var mes = document.getElementById('filtroGastoMes').value;
+    var cat = document.getElementById('filtroGastoCat').value;
+    call('listGastos', [{ mes: mes, categoria: cat }]).then(function (data) {
+      window.__GASTOS = data;
+      var tbody = document.getElementById('tbodyGastos');
+      if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted">Sin gastos</td></tr>'; return; }
+      tbody.innerHTML = data.map(function (g) {
+        return '<tr><td>' + esc(g.fecha) + '</td><td>' + esc(g.categoria || '') + '</td><td>' + esc(g.descripcion) + '</td>' +
+          '<td><strong>' + fmtMoney(g.monto) + '</strong></td><td>' + esc(g.proveedor || '') + '</td>' +
+          '<td><button class="small ghost" onclick="openGastoForm(\'' + g.id_gasto + '\')">Editar</button> ' +
+          '<button class="small danger" onclick="delGasto(\'' + g.id_gasto + '\')">Eliminar</button></td></tr>';
+      }).join('');
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function applyFiltrosGastos() { loadGastos(); }
+
+  function catOptions(selected) {
+    return String(STATE.config.categorias_gastos || '').split(',').map(function (c) {
+      c = c.trim();
+      return c ? '<option value="' + esc(c) + '"' + (c === selected ? ' selected' : '') + '>' + esc(c) + '</option>' : '';
+    }).join('');
+  }
+
+  function openGastoForm(id) {
+    var g = (window.__GASTOS || []).filter(function (x) { return x.id_gasto === id; })[0] || {};
+    var metodo = g.metodo_pago || 'Transferencia';
+    var metodos = ['Efectivo', 'Transferencia', 'Tarjeta'].map(function (m) {
+      return '<option' + (m === metodo ? ' selected' : '') + '>' + m + '</option>';
+    }).join('');
+    openModal(
+      '<h2>' + (id ? 'Editar gasto' : 'Registrar gasto') + '</h2>' +
+      '<label>Fecha</label><input type="date" id="gasFecha" value="' + esc(g.fecha || new Date().toISOString().slice(0, 10)) + '">' +
+      '<label>Categoría</label><select id="gasCat"><option value="">—</option>' + catOptions(g.categoria) + '</select>' +
+      '<label>Descripción *</label><input id="gasDesc" value="' + esc(g.descripcion || '') + '">' +
+      '<label>Monto *</label><input id="gasMonto" type="number" min="0" step="0.01" value="' + esc(g.monto !== undefined ? g.monto : '') + '">' +
+      '<label>Método de pago</label><select id="gasMetodo">' + metodos + '</select>' +
+      '<label>Proveedor</label><input id="gasProv" value="' + esc(g.proveedor || '') + '">' +
+      '<button onclick="saveGastoForm(\'' + (g.id_gasto || '') + '\')">Guardar</button> ' +
+      '<button onclick="closeModal()">Cancelar</button>'
+    );
+  }
+
+  function saveGastoForm(id) {
+    var payload = {
+      id_gasto: id || undefined,
+      fecha: document.getElementById('gasFecha').value,
+      categoria: document.getElementById('gasCat').value,
+      descripcion: document.getElementById('gasDesc').value,
+      monto: Number(document.getElementById('gasMonto').value),
+      metodo_pago: document.getElementById('gasMetodo').value,
+      proveedor: document.getElementById('gasProv').value
+    };
+    call('saveGasto', [payload]).then(function () { toast('Gasto guardado'); closeModal(); loadGastos(); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function delGasto(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    call('deleteGasto', [id]).then(function () { toast('Gasto eliminado'); loadGastos(); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function loadReportes() {
+    var mes = document.getElementById('reporteMes').value || mesActual();
+    document.getElementById('reporteMes').value = mes;
+    call('getReportes', [mes]).then(function (d) {
+      document.getElementById('rFacturado').textContent = fmtMoney(d.facturado);
+      document.getElementById('rCobrado').textContent = fmtMoney(d.cobrado);
+      document.getElementById('rPendiente').textContent = fmtMoney(d.pendiente);
+      document.getElementById('rGastos').textContent = fmtMoney(d.gastos_total);
+      document.getElementById('rUtilidad').textContent = fmtMoney(d.utilidad);
+      var cats = Object.keys(d.gastos_por_categoria);
+      document.getElementById('listaCategorias').innerHTML = cats.length
+        ? cats.map(function (c) { return '<li>' + esc(c) + ': <strong>' + fmtMoney(d.gastos_por_categoria[c]) + '</strong></li>'; }).join('')
+        : '<li>Sin gastos en el mes</li>';
+      var tbody = document.getElementById('tbodyTopClientes');
+      tbody.innerHTML = d.top_clientes.length
+        ? d.top_clientes.map(function (t) { return '<tr><td>' + esc(t.nombre) + '</td><td>' + fmtMoney(t.total) + '</td></tr>'; }).join('')
+        : '<tr><td colspan="2" class="muted">Sin facturas en el mes</td></tr>';
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function loadConfigView() {
+    var c = STATE.config;
+    document.getElementById('cfEmpresa').value = c.empresa_nombre || '';
+    document.getElementById('cfRfc').value = c.empresa_rfc || '';
+    document.getElementById('cfDir').value = c.empresa_direccion || '';
+    document.getElementById('cfTel').value = c.empresa_telefono || '';
+    document.getElementById('cfEmail').value = c.empresa_email || '';
+    document.getElementById('cfLogo').value = c.empresa_logo || '';
+    document.getElementById('cfMoneda').value = c.moneda || '';
+    document.getElementById('cfSimbolo').value = c.moneda_simbolo || '';
+    document.getElementById('cfPrefijo').value = c.prefijo_folio || '';
+    document.getElementById('cfContador').value = c.contador_folio || '1';
+    document.getElementById('cfIva').value = c.iva_porcentaje || '0';
+    document.getElementById('cfCats').value = c.categorias_gastos || '';
+  }
+
+  function saveConfigForm() {
+    var payload = {
+      empresa_nombre: document.getElementById('cfEmpresa').value,
+      empresa_rfc: document.getElementById('cfRfc').value,
+      empresa_direccion: document.getElementById('cfDir').value,
+      empresa_telefono: document.getElementById('cfTel').value,
+      empresa_email: document.getElementById('cfEmail').value,
+      empresa_logo: document.getElementById('cfLogo').value,
+      moneda: document.getElementById('cfMoneda').value,
+      moneda_simbolo: document.getElementById('cfSimbolo').value,
+      prefijo_folio: document.getElementById('cfPrefijo').value,
+      contador_folio: document.getElementById('cfContador').value,
+      iva_porcentaje: document.getElementById('cfIva').value,
+      categorias_gastos: document.getElementById('cfCats').value
+    };
+    call('saveConfig', [payload]).then(function () {
+      STATE.config = payload;
+      document.getElementById('empresaLabel').textContent = (payload.empresa_nombre || '') + ' — ' + (payload.moneda || '');
+      toast('Configuración guardada');
+      loadConfigView();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+</script>
+</body>
+</html>
