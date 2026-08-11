@@ -120,7 +120,22 @@
         </table>
       </div>
     </section>
-    <section class="view" id="view-gastos"></section>
+    <section class="view" id="view-gastos">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Mes</label><input type="month" id="filtroGastoMes"></div>
+          <div><label>Categoría</label><select id="filtroGastoCat"><option value="">Todas</option></select></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="applyFiltrosGastos()">Filtrar</button></div>
+          <div style="flex:0;padding-bottom:12px"><button class="ghost" onclick="openGastoForm()">Registrar gasto</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Proveedor</th><th></th></tr></thead>
+          <tbody id="tbodyGastos"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
     <section class="view" id="view-reportes"></section>
     <section class="view" id="view-config"></section>
   </main>
@@ -426,6 +441,70 @@
   function delCliente(id) {
     if (!confirm('¿Eliminar este cliente?')) return;
     call('deleteCliente', [id]).then(function () { toast('Cliente eliminado'); loadClientes(); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function loadGastos() {
+    var mes = document.getElementById('filtroGastoMes').value;
+    var cat = document.getElementById('filtroGastoCat').value;
+    call('listGastos', [{ mes: mes, categoria: cat }]).then(function (data) {
+      window.__GASTOS = data;
+      var tbody = document.getElementById('tbodyGastos');
+      if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted">Sin gastos</td></tr>'; return; }
+      tbody.innerHTML = data.map(function (g) {
+        return '<tr><td>' + g.fecha + '</td><td>' + (g.categoria || '') + '</td><td>' + g.descripcion + '</td>' +
+          '<td><strong>' + fmtMoney(g.monto) + '</strong></td><td>' + (g.proveedor || '') + '</td>' +
+          '<td><button class="small ghost" onclick="openGastoForm(\'' + g.id_gasto + '\')">Editar</button> ' +
+          '<button class="small danger" onclick="delGasto(\'' + g.id_gasto + '\')">Eliminar</button></td></tr>';
+      }).join('');
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function applyFiltrosGastos() { loadGastos(); }
+
+  function catOptions(selected) {
+    return String(STATE.config.categorias_gastos || '').split(',').map(function (c) {
+      c = c.trim();
+      return c ? '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>' : '';
+    }).join('');
+  }
+
+  function openGastoForm(id) {
+    var g = (window.__GASTOS || []).filter(function (x) { return x.id_gasto === id; })[0] || {};
+    var metodo = g.metodo_pago || 'Transferencia';
+    var metodos = ['Efectivo', 'Transferencia', 'Tarjeta'].map(function (m) {
+      return '<option' + (m === metodo ? ' selected' : '') + '>' + m + '</option>';
+    }).join('');
+    openModal(
+      '<h2>' + (id ? 'Editar gasto' : 'Registrar gasto') + '</h2>' +
+      '<label>Fecha</label><input type="date" id="gasFecha" value="' + (g.fecha || new Date().toISOString().slice(0, 10)) + '">' +
+      '<label>Categoría</label><select id="gasCat"><option value="">—</option>' + catOptions(g.categoria) + '</select>' +
+      '<label>Descripción *</label><input id="gasDesc" value="' + (g.descripcion || '') + '">' +
+      '<label>Monto *</label><input id="gasMonto" type="number" min="0" step="0.01" value="' + (g.monto !== undefined ? g.monto : '') + '">' +
+      '<label>Método de pago</label><select id="gasMetodo">' + metodos + '</select>' +
+      '<label>Proveedor</label><input id="gasProv" value="' + (g.proveedor || '') + '">' +
+      '<button onclick="saveGastoForm(\'' + (g.id_gasto || '') + '\')">Guardar</button> ' +
+      '<button onclick="closeModal()">Cancelar</button>'
+    );
+  }
+
+  function saveGastoForm(id) {
+    var payload = {
+      id_gasto: id || undefined,
+      fecha: document.getElementById('gasFecha').value,
+      categoria: document.getElementById('gasCat').value,
+      descripcion: document.getElementById('gasDesc').value,
+      monto: Number(document.getElementById('gasMonto').value),
+      metodo_pago: document.getElementById('gasMetodo').value,
+      proveedor: document.getElementById('gasProv').value
+    };
+    call('saveGasto', [payload]).then(function () { toast('Gasto guardado'); closeModal(); loadGastos(); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function delGasto(id) {
+    if (!confirm('¿Eliminar este gasto?')) return;
+    call('deleteGasto', [id]).then(function () { toast('Gasto eliminado'); loadGastos(); })
       .catch(function (e) { toast(e.message, 'error'); });
   }
 </script>
