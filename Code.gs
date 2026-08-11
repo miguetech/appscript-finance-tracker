@@ -76,3 +76,36 @@ function test_Config_save() {
   if (badNum.ok) throw new Error('debió fallar con contador no numérico');
   saveConfig(original);
 }
+
+function listClientes() {
+  return respond_(function () { return Data.listClientes_(); });
+}
+
+function saveCliente(obj) {
+  return respond_(function () {
+    var faltantes = Aux.requireFields(obj, ['nombre']);
+    if (faltantes.length) throw new Error('El nombre del cliente es obligatorio');
+    return Data.saveCliente_(obj);
+  });
+}
+
+function deleteCliente(id) {
+  return respond_(function () { Data.deleteCliente_(id); return true; });
+}
+
+function test_Clientes_CRUD() {
+  var c = saveCliente({ nombre: 'Juan Test', rfc: 'JUA880101AAA', email: 'j@t.com' });
+  if (!c.ok) throw new Error(c.error);
+  var id = c.data.id_cliente;
+  if (!id) throw new Error('sin id generado');
+  var upd = saveCliente({ id_cliente: id, nombre: 'Juan Test 2', rfc: 'JUA880101AAA', email: 'j2@t.com' });
+  if (!upd.ok) throw new Error(upd.error);
+  var list = listClientes();
+  if (!list.ok) throw new Error(list.error);
+  var match = list.data.filter(function (x) { return x.id_cliente === id; });
+  if (match.length !== 1 || match[0].nombre !== 'Juan Test 2') throw new Error('update falló');
+  var del = deleteCliente(id);
+  if (!del.ok) throw new Error(del.error);
+  list = listClientes();
+  if (list.data.some(function (x) { return x.id_cliente === id; })) throw new Error('no eliminó');
+}

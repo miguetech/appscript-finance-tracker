@@ -116,3 +116,38 @@ var Data = {
 
 Data.readConfig_ = readConfig_;
 Data.saveConfig_ = saveConfig_;
+
+function listClientes_() {
+  return readRows_(getSheet_('Clientes'));
+}
+
+function saveCliente_(obj) {
+  var sh = getSheet_('Clientes');
+  var headers = HEADERS.Clientes;
+  if (obj.id_cliente) {
+    var row = findRowBy_(sh, 'id_cliente', obj.id_cliente, headers);
+    if (row < 0) throw new Error('Cliente no encontrado');
+    updateRow_(sh, row, obj, headers);
+    return obj;
+  }
+  obj.id_cliente = Aux.uid('cli');
+  obj.fecha_registro = obj.fecha_registro || new Date().toISOString().slice(0, 10);
+  appendRow_(sh, obj, headers);
+  return obj;
+}
+
+function hasInvoices_(clienteId) {
+  var sh = getSheet_('Facturas');
+  return findRowBy_(sh, 'id_cliente', clienteId, HEADERS.Facturas) > 0;
+}
+
+function deleteCliente_(id) {
+  if (hasInvoices_(id)) throw new Error('No se puede eliminar: el cliente tiene facturas');
+  var sh = getSheet_('Clientes');
+  deleteRow_(sh, findRowBy_(sh, 'id_cliente', id, HEADERS.Clientes));
+}
+
+Data.listClientes_ = listClientes_;
+Data.saveCliente_ = saveCliente_;
+Data.hasInvoices_ = hasInvoices_;
+Data.deleteCliente_ = deleteCliente_;
