@@ -162,7 +162,37 @@
         </table>
       </div>
     </section>
-    <section class="view" id="view-config"></section>
+    <section class="view" id="view-config">
+      <div class="card">
+        <h3>Datos de la empresa</h3>
+        <div class="row">
+          <div><label>Nombre *</label><input id="cfEmpresa" value=""></div>
+          <div><label>RFC</label><input id="cfRfc"></div>
+        </div>
+        <label>Dirección</label><input id="cfDir">
+        <div class="row">
+          <div><label>Teléfono</label><input id="cfTel"></div>
+          <div><label>Email</label><input id="cfEmail"></div>
+        </div>
+        <label>Logo (URL)</label><input id="cfLogo" placeholder="https://...">
+      </div>
+      <div class="card">
+        <h3>Configuración de facturación</h3>
+        <div class="row">
+          <div><label>Moneda</label><input id="cfMoneda" placeholder="USD"></div>
+          <div><label>Símbolo</label><input id="cfSimbolo" placeholder="$"></div>
+        </div>
+        <div class="row">
+          <div><label>Prefijo de folio *</label><input id="cfPrefijo" placeholder="FAC-"></div>
+          <div><label>Contador actual</label><input id="cfContador" type="number" min="1"></div>
+        </div>
+        <div class="row">
+          <div><label>IVA %</label><input id="cfIva" type="number" min="0" step="0.01"></div>
+          <div><label>Categorías de gastos (separadas por coma)</label><input id="cfCats"></div>
+        </div>
+        <button onclick="saveConfigForm()">Guardar configuración</button>
+      </div>
+    </section>
   </main>
 </div>
 <div class="toast" id="toast"></div>
@@ -550,6 +580,45 @@
       tbody.innerHTML = d.top_clientes.length
         ? d.top_clientes.map(function (t) { return '<tr><td>' + t.nombre + '</td><td>' + fmtMoney(t.total) + '</td></tr>'; }).join('')
         : '<tr><td colspan="2" class="muted">Sin facturas en el mes</td></tr>';
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function loadConfigView() {
+    var c = STATE.config;
+    document.getElementById('cfEmpresa').value = c.empresa_nombre || '';
+    document.getElementById('cfRfc').value = c.empresa_rfc || '';
+    document.getElementById('cfDir').value = c.empresa_direccion || '';
+    document.getElementById('cfTel').value = c.empresa_telefono || '';
+    document.getElementById('cfEmail').value = c.empresa_email || '';
+    document.getElementById('cfLogo').value = c.empresa_logo || '';
+    document.getElementById('cfMoneda').value = c.moneda || '';
+    document.getElementById('cfSimbolo').value = c.moneda_simbolo || '';
+    document.getElementById('cfPrefijo').value = c.prefijo_folio || '';
+    document.getElementById('cfContador').value = c.contador_folio || '1';
+    document.getElementById('cfIva').value = c.iva_porcentaje || '0';
+    document.getElementById('cfCats').value = c.categorias_gastos || '';
+  }
+
+  function saveConfigForm() {
+    var payload = {
+      empresa_nombre: document.getElementById('cfEmpresa').value,
+      empresa_rfc: document.getElementById('cfRfc').value,
+      empresa_direccion: document.getElementById('cfDir').value,
+      empresa_telefono: document.getElementById('cfTel').value,
+      empresa_email: document.getElementById('cfEmail').value,
+      empresa_logo: document.getElementById('cfLogo').value,
+      moneda: document.getElementById('cfMoneda').value,
+      moneda_simbolo: document.getElementById('cfSimbolo').value,
+      prefijo_folio: document.getElementById('cfPrefijo').value,
+      contador_folio: document.getElementById('cfContador').value,
+      iva_porcentaje: document.getElementById('cfIva').value,
+      categorias_gastos: document.getElementById('cfCats').value
+    };
+    call('saveConfig', [payload]).then(function () {
+      STATE.config = payload;
+      document.getElementById('empresaLabel').textContent = (payload.empresa_nombre || '') + ' — ' + (payload.moneda || '');
+      toast('Configuración guardada');
+      loadConfigView();
     }).catch(function (e) { toast(e.message, 'error'); });
   }
 </script>
