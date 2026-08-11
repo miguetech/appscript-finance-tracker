@@ -241,7 +241,14 @@
     t.textContent = icon + msg;
     t.className = 'toast show ' + (type || 'ok');
     clearTimeout(t._timer);
-    t._timer = setTimeout(function () { t.classList.remove('show'); }, 4500);
+    var dur = type === 'welcome' ? 6000 : 4500;
+    t._timer = setTimeout(function () { t.classList.remove('show'); }, dur);
+  }
+
+  function aviso(msg, isError) {
+    toast(msg, isError ? 'error' : 'ok');
+    if (isError) alert('Error: ' + msg);
+    else alert('✓ ' + msg);
   }
 
   function fmtMoney(n) {
@@ -282,6 +289,7 @@
       STATE.config = cfg;
       document.getElementById('empresaLabel').textContent = (cfg.empresa_nombre || '') + ' — ' + (cfg.moneda || '');
       if (typeof loadDashboard === 'function') loadDashboard();
+      toast('Aplicación lista. Empieza en Configuración o crea tu primera factura.', 'welcome');
     }).catch(function (e) { toast(e.message, 'error'); });
   }
   var FACTURAS = [];
@@ -440,10 +448,10 @@
       items: items
     };
     call('createFactura', [payload]).then(function (f) {
-      toast('Factura ' + f.folio + ' guardada correctamente');
+      aviso('Factura ' + f.folio + ' guardada correctamente');
       closeModal();
       loadFacturas(false);
-    }).catch(function (e) { toast(e.message, 'error'); });
+    }).catch(function (e) { aviso(e.message, true); });
   }
 
   window.addEventListener('DOMContentLoaded', init);
@@ -498,10 +506,10 @@
       direccion: document.getElementById('cliDir').value
     };
     call('saveCliente', [payload]).then(function () {
-      toast('Cliente guardado correctamente');
+      aviso('Cliente guardado correctamente');
       closeModal();
       loadClientes();
-    }).catch(function (e) { toast(e.message, 'error'); });
+    }).catch(function (e) { aviso(e.message, true); });
   }
 
   function delCliente(id) {
@@ -564,8 +572,8 @@
       metodo_pago: document.getElementById('gasMetodo').value,
       proveedor: document.getElementById('gasProv').value
     };
-    call('saveGasto', [payload]).then(function () { toast('Gasto guardado correctamente'); closeModal(); loadGastos(); })
-      .catch(function (e) { toast(e.message, 'error'); });
+    call('saveGasto', [payload]).then(function () { aviso('Gasto guardado correctamente'); closeModal(); loadGastos(); })
+      .catch(function (e) { aviso(e.message, true); });
   }
 
   function delGasto(id) {
@@ -628,9 +636,9 @@
     call('saveConfig', [payload]).then(function () {
       STATE.config = payload;
       document.getElementById('empresaLabel').textContent = (payload.empresa_nombre || '') + ' — ' + (payload.moneda || '');
-      toast('Configuración guardada correctamente');
+      aviso('Configuración guardada correctamente');
       loadConfigView();
-    }).catch(function (e) { toast(e.message, 'error'); });
+    }).catch(function (e) { aviso(e.message, true); });
   }
 </script>
 </body>
