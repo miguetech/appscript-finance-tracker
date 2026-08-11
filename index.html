@@ -90,7 +90,22 @@
         <button class="ghost" onclick="showView('gastos')">Registrar gasto</button>
       </div>
     </section>
-    <section class="view" id="view-facturas"></section>
+    <section class="view" id="view-facturas">
+      <div class="card">
+        <div class="row" style="align-items:flex-end">
+          <div><label>Estado</label><select id="filtroEstado"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="pagada">Pagada</option></select></div>
+          <div><label>Mes</label><input type="month" id="filtroMes"></div>
+          <div style="flex:0;padding-bottom:12px"><button onclick="applyFiltrosFacturas()">Filtrar</button></div>
+          <div style="flex:0;padding-bottom:12px"><button class="ghost" onclick="openNewInvoice()">Nueva factura</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbodyFacturas"><tr><td colspan="6" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
     <section class="view" id="view-clientes"></section>
     <section class="view" id="view-gastos"></section>
     <section class="view" id="view-reportes"></section>
@@ -175,6 +190,168 @@
       if (typeof loadDashboard === 'function') loadDashboard();
     }).catch(function (e) { toast(e.message, 'error'); });
   }
+  var FACTURAS = [];
+
+  function loadFacturas(openNew) {
+    var estado = document.getElementById('filtroEstado').value;
+    var mes = document.getElementById('filtroMes').value;
+    call('listFacturas', [{ estado: estado, mes: mes }]).then(function (data) {
+      FACTURAS = data;
+      var tbody = document.getElementById('tbodyFacturas');
+      if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted">Sin facturas</td></tr>'; return; }
+      tbody.innerHTML = data.map(function (f) {
+        var badge = f.estado === 'pagada' ? '<span class="badge pagada">Pagada</span>' : '<span class="badge pendiente">Pendiente</span>';
+        var btnEstado = f.estado === 'pagada'
+          ? '<button class="small ghost" onclick="markFactura(\'' + f.id_factura + '\',\'pendiente\')">Marcar pendiente</button>'
+          : '<button class="small ghost" onclick="markFactura(\'' + f.id_factura + '\',\'pagada\')">Marcar pagada</button>';
+        return '<tr>' +
+          '<td><strong>' + f.folio + '</strong></td>' +
+          '<td>' + f.nombre_cliente + '</td>' +
+          '<td>' + f.fecha_emision + '</td>' +
+          '<td>' + fmtMoney(f.total) + '</td>' +
+          '<td>' + badge + '</td>' +
+          '<td>' +
+            '<button class="small ghost" onclick="openInvoiceDetail(\'' + f.id_factura + '\')">Ver</button> ' +
+            '<button class="small ghost" onclick="downloadPDF(\'' + f.id_factura + '\')">PDF</button> ' +
+            btnEstado + ' ' +
+            '<button class="small danger" onclick="delFactura(\'' + f.id_factura + '\')">Eliminar</button>' +
+          '</td></tr>';
+      }).join('');
+      if (openNew) openNewInvoice();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function applyFiltrosFacturas() { loadFacturas(false); }
+
+  function markFactura(id, estado) {
+    call('setEstadoFactura', [id, estado]).then(function () {
+      toast('Factura ' + (estado === 'pagada' ? 'pagada' : 'pendiente'));
+      loadFacturas(false);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function delFactura(id) {
+    if (!confirm('¿Eliminar esta factura y sus conceptos?')) return;
+    call('deleteFactura', [id]).then(function () { toast('Factura eliminada'); loadFacturas(false); })
+      .catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function downloadPDF(id) {
+    google.script.run.withSuccessHandler(function (b64) {
+      var a = document.createElement('a');
+      a.href = 'data:application/pdf;base64,' + b64;
+      a.download = 'Factura_' + id + '.pdf';
+      a.click();
+    }).withFailureHandler(function (err) { toast(String(err), 'error'); }).buildPDF(id);
+  }
+
+  function openInvoiceDetail(id) {
+    call('getFactura', [id]).then(function (d) {
+      var f = d.factura;
+      var rows = d.items.map(function (it) {
+        return '<tr><td>' + it.descripcion + '</td><td>' + it.cantidad + '</td><td>' + fmtMoney(it.precio_unitario) + '</td><td>' + fmtMoney(it.importe) + '</td></tr>';
+      }).join('');
+      openModal(
+        '<h2>Factura ' + f.folio + '</h2>' +
+        '<div class="muted">Cliente: ' + f.nombre_cliente + '</div>' +
+        '<div class="muted">Emisión: ' + f.fecha_emision + '</div>' +
+        '<table><thead><tr><th>Descripción</th><th>Cant.</th><th>P. Unitario</th><th>Importe</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        '<div class="totals-preview">Subtotal: ' + fmtMoney(f.subtotal) + '<br>IVA: ' + fmtMoney(f.iva) + '<br><strong>Total: ' + fmtMoney(f.total) + '</strong></div>' +
+        (f.notas ? '<div class="muted">Notas: ' + f.notas + '</div>' : '') +
+        '<br><button class="ghost" onclick="downloadPDF(\'' + f.id_factura + '\')">Descargar PDF</button> ' +
+        '<button onclick="closeModal()">Cerrar</button>'
+      );
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function addItemRow() {
+    var box = document.getElementById('itemsBox');
+    var div = document.createElement('div');
+    div.className = 'item-row';
+    div.innerHTML =
+      '<input class="desc" placeholder="Descripción">' +
+      '<input class="num" type="number" min="0" step="0.01" placeholder="Cant." value="1">' +
+      '<input class="num" type="number" min="0" step="0.01" placeholder="Precio">' +
+      '<button class="small danger" onclick="this.parentNode.remove(); updatePreview()">✕</button>';
+    box.appendChild(div);
+    updatePreview();
+  }
+
+  function updatePreview() {
+    var rows = document.querySelectorAll('#itemsBox .item-row');
+    var subtotal = 0;
+    rows.forEach(function (r) {
+      var inputs = r.querySelectorAll('input');
+      subtotal += Number(inputs[1].value || 0) * Number(inputs[2].value || 0);
+    });
+    var ivaPct = Number(STATE.config.iva_porcentaje) || 0;
+    var iva = subtotal * ivaPct / 100;
+    document.getElementById('previewTotales').innerHTML =
+      'Subtotal: ' + fmtMoney(subtotal) + '<br>IVA (' + ivaPct + '%): ' + fmtMoney(iva) + '<br><strong>Total: ' + fmtMoney(subtotal + iva) + '</strong>';
+  }
+
+  function openNewInvoice() {
+    call('listClientes').then(function (clientes) {
+      var opts = clientes.map(function (c) {
+        return '<option value="' + c.id_cliente + '">' + c.nombre + '</option>';
+      }).join('');
+      openModal(
+        '<h2>Nueva factura</h2>' +
+        '<label>Cliente</label><select id="selCliente">' + (opts || '<option value="">Sin clientes</option>') + '</select>' +
+        '<button class="small ghost" onclick="openQuickClient()">Crear cliente rápido</button>' +
+        '<div id="quickClientBox"></div>' +
+        '<label>Conceptos</label><div id="itemsBox"></div>' +
+        '<button class="small ghost" onclick="addItemRow()">+ Agregar concepto</button>' +
+        '<div class="totals-preview" id="previewTotales"></div>' +
+        '<label>Fecha de emisión</label><input type="date" id="fechaEmision" value="' + new Date().toISOString().slice(0, 10) + '">' +
+        '<label>Fecha de vencimiento</label><input type="date" id="fechaVencimiento">' +
+        '<label>Notas</label><textarea id="notasFactura" rows="2"></textarea>' +
+        '<button onclick="saveInvoice()">Guardar factura</button> <button onclick="closeModal()">Cancelar</button>'
+      );
+      addItemRow();
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function openQuickClient() {
+    var box = document.getElementById('quickClientBox');
+    box.innerHTML =
+      '<div class="card" style="margin-top:8px">' +
+      '<label>Nombre</label><input id="qcNombre">' +
+      '<label>RFC</label><input id="qcRfc">' +
+      '<label>Email</label><input id="qcEmail">' +
+      '<button class="small" onclick="saveQuickClient()">Guardar cliente</button></div>';
+  }
+
+  function saveQuickClient() {
+    call('saveCliente', [{ nombre: document.getElementById('qcNombre').value, rfc: document.getElementById('qcRfc').value, email: document.getElementById('qcEmail').value }])
+      .then(function (c) {
+        var sel = document.getElementById('selCliente');
+        sel.insertAdjacentHTML('afterbegin', '<option value="' + c.id_cliente + '" selected>' + c.nombre + '</option>');
+        document.getElementById('quickClientBox').innerHTML = '';
+        toast('Cliente creado');
+      }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
+  function saveInvoice() {
+    var items = [];
+    document.querySelectorAll('#itemsBox .item-row').forEach(function (r) {
+      var i = r.querySelectorAll('input');
+      items.push({ descripcion: i[0].value, cantidad: Number(i[1].value), precio_unitario: Number(i[2].value) });
+    });
+    var payload = {
+      id_cliente: document.getElementById('selCliente').value,
+      fecha_emision: document.getElementById('fechaEmision').value,
+      fecha_vencimiento: document.getElementById('fechaVencimiento').value,
+      notas: document.getElementById('notasFactura').value,
+      items: items
+    };
+    call('createFactura', [payload]).then(function (f) {
+      toast('Factura ' + f.folio + ' creada');
+      closeModal();
+      loadFacturas(false);
+    }).catch(function (e) { toast(e.message, 'error'); });
+  }
+
   window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
